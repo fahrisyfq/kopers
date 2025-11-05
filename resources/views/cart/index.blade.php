@@ -17,15 +17,14 @@
                 <h1 class="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-tight">Keranjang Belanja</h1>
             </div>
              @if(!empty($cart))
-                <form action="{{ route('cart.clear') }}" method="POST" class="delete-item" data-title="Kosongkan Keranjang?" data-text="Semua item akan dihapus dari keranjang."> {{-- Class & data untuk JS --}}
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit"
-                            class="flex items-center gap-1.5 text-red-600 hover:text-red-800 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 hover:bg-red-50 transition-colors duration-200 self-end sm:self-center shadow-sm hover:shadow">
-                        {{-- PERUBAHAN: Ikon diganti --}}
-                        <i class="fas fa-trash-alt text-xs"></i> Kosongkan Keranjang
-                    </button>
-                </form>
+                 <form action="{{ route('cart.clear') }}" method="POST" class="delete-item" data-title="Kosongkan Keranjang?" data-text="Semua item akan dihapus dari keranjang."> {{-- Class & data untuk JS --}}
+                     @csrf
+                     @method('DELETE')
+                     <button type="submit"
+                             class="flex items-center gap-1.5 text-red-600 hover:text-red-800 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 hover:bg-red-50 transition-colors duration-200 self-end sm:self-center shadow-sm hover:shadow">
+                         <i class="fas fa-trash-alt text-xs"></i> Kosongkan Keranjang
+                     </button>
+                 </form>
              @endif
         </div>
 
@@ -49,7 +48,6 @@
 
         {{-- Kondisi Keranjang Ada Isi --}}
         @else
-            {{-- PERUBAHAN: Layout 2 kolom (Desktop) --}}
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
                 
                 <div class="lg:col-span-8 space-y-4"> 
@@ -59,7 +57,7 @@
                                 
                                 <div class="w-24 h-24 sm:w-20 sm:h-20 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50 mb-3 sm:mb-0 shadow-inner">
                                     @if(!empty($item['image']))
-                                        <img src="{{ asset('storage/' . $item['image']) }}" alt="{{ $item['title'] }}" class="w-full h-full object-cover">
+                                        <img src="{{ asset('storage/'. $item['image']) }}" alt="{{ $item['title'] }}" class="w-full h-full object-cover">
                                     @else
                                         <div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">No Img</div>
                                     @endif
@@ -76,45 +74,66 @@
                                         @endif
                                     </div>
                                      <span class="text-emerald-600 font-bold text-base tracking-tight">
-                                         Rp {{ number_format($item['price'],0,',','.') }}
+                                          Rp {{ number_format($item['price'],0,',','.') }}
                                      </span>
                                 </div>
 
-                                {{-- PERUBAHAN: Layout Qty, Total, Hapus --}}
                                 <div class="flex flex-col sm:flex-row items-end sm:items-center gap-4 w-full sm:w-auto mt-4 sm:mt-0 sm:ml-5">
                                     
-                                    {{-- PERUBAHAN: Kontrol Qty disesuaikan --}}
-                                    <div class="flex items-center rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-                                        <form action="{{ route('cart.update', $key) }}" method="POST" class="inline">
-                                            @csrf
-                                            <input type="hidden" name="quantity" value="{{ max(1, $item['quantity'] - 1) }}">
-                                            <button type="submit"
-                                                    class="qty-adjust-button-v2 {{ $item['quantity'] <= 1 ? 'disabled' : 'enabled' }}"
-                                                    {{ $item['quantity'] <= 1 ? 'disabled' : '' }}>
-                                                <i class="fas fa-minus text-xs"></i>
-                                            </button>
-                                        </form>
+                                    {{-- ====================================================== --}}
+                                    {{--      PERBAIKAN DI SINI: INPUT NUMBER DENGAN LABEL     --}}
+                                    {{-- ====================================================== --}}
+                                    <div class="py-2 px-3 bg-white border border-gray-200 rounded-lg shadow-sm w-[150px]"> {{-- Beri lebar fixed biar tidak melebar --}}
+                                        <div class="flex flex-col gap-y-1"> {{-- Menggunakan flex-col untuk label dan input --}}
+                                            <label for="quantity-{{$key}}" class="text-xs text-gray-500">Jumlah</label> {{-- Label di atas --}}
+                                            <div class="flex items-center justify-between gap-x-3"> {{-- Flex untuk input dan tombol --}}
+                                                <input id="quantity-{{$key}}" 
+                                                       class="w-full p-0 bg-transparent border-0 text-gray-800 text-base font-bold focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none dark:text-gray-800" 
+                                                       style="-moz-appearance: textfield;" 
+                                                       type="number" 
+                                                       value="{{ $item['quantity'] }}" 
+                                                       min="1" 
+                                                       max="{{ $item['stock'] }}"
+                                                       readonly> {{-- Set readonly agar hanya bisa diubah via tombol --}}
+                                                
+                                                <div class="flex items-center gap-x-1.5">
+                                                    <form action="{{ route('cart.update', $key) }}" method="POST" class="inline">
+                                                        @csrf
+                                                        <input type="hidden" name="quantity" value="{{ max(1, $item['quantity'] - 1) }}">
+                                                        <button type="submit" 
+                                                                class="size-6 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-full border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+                                                                {{ $item['quantity'] <= 1 ? 'disabled' : '' }}>
+                                                            <svg class="shrink-0 size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                                <path d="M5 12h14"></path>
+                                                            </svg>
+                                                        </button>
+                                                    </form>
                                         
-                                        <span class="w-12 text-center font-semibold text-gray-800 text-sm py-2 bg-white border-y border-gray-200" style="font-variant-numeric: tabular-nums;">
-                                            {{ $item['quantity'] }}
-                                        </span>
-
-                                        <form action="{{ route('cart.update', $key) }}" method="POST" class="inline">
-                                            @csrf
-                                            <input type="hidden" name="quantity" value="{{ min($item['stock'], $item['quantity'] + 1) }}">
-                                            <button type="submit"
-                                                    class="qty-adjust-button-v2 {{ $item['quantity'] >= $item['stock'] ? 'disabled' : 'enabled' }}"
-                                                    {{ $item['quantity'] >= $item['stock'] ? 'disabled' : '' }}>
-                                                <i class="fas fa-plus text-xs"></i>
-                                            </button>
-                                        </form>
+                                                    <form action="{{ route('cart.update', $key) }}" method="POST" class="inline">
+                                                        @csrf
+                                                        <input type="hidden" name="quantity" value="{{ min($item['stock'], $item['quantity'] + 1) }}">
+                                                        <button type="submit" 
+                                                                class="size-6 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-full border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+                                                                {{ $item['quantity'] >= $item['stock'] ? 'disabled' : '' }}>
+                                                            <svg class="shrink-0 size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                                <path d="M5 12h14"></path>
+                                                                <path d="M12 5v14"></path>
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
+                                    {{-- ====================================================== --}}
+                                    {{--             AKHIR PERBAIKAN INPUT QTY                 --}}
+                                    {{-- ====================================================== --}}
+
 
                                     <div class="text-right font-bold text-gray-800 text-base w-28 sm:w-32 flex-shrink-0 tabular-nums">
                                         <span>Rp {{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}</span>
                                     </div>
                                     
-                                    {{-- PERUBAHAN: Tombol Hapus dipindah ke sini --}}
                                     <form action="{{ route('cart.remove', $key) }}" method="POST" class="inline delete-item" data-title="Hapus produk ini?">
                                         @csrf
                                         <button type="submit" title="Hapus item"
@@ -146,8 +165,6 @@
                                     <span>Subtotal (<span class="font-medium">{{ count($cart) }}</span> item)</span>
                                     <span class="font-medium text-gray-800 tabular-nums">Rp {{ number_format($subtotal, 0, ',', '.') }}</span>
                                 </div>
-                                {{-- PERUBAHAN: PPN Dihapus --}}
-                                {{-- <div class="flex justify-between text-gray-600"> ... </div> --}}
                             </div>
                             <div class="border-t border-gray-200 my-4"></div>
                             <div class="flex justify-between items-center mb-6">
@@ -157,9 +174,9 @@
 
                             <a href="{{ route('checkout.index') }}" 
                                class="cta-button w-full relative inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 
-                                      text-white font-semibold px-8 py-3 rounded-lg shadow-lg 
-                                      hover:shadow-cyan-400/50 transition-all duration-300 
-                                      transform hover:scale-[1.03] active:scale-[0.98] overflow-hidden text-base group">
+                                     text-white font-semibold px-8 py-3 rounded-lg shadow-lg 
+                                     hover:shadow-cyan-400/50 transition-all duration-300 
+                                     transform hover:scale-[1.03] active:scale-[0.98] overflow-hidden text-base group">
                                 <span class="relative z-10">Lanjut ke Checkout</span>
                                 <i class="fas fa-arrow-right text-sm relative z-10 transform group-hover:translate-x-1 transition-transform duration-300"></i>
                                 <span class="shine"></span>
@@ -183,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Ambil data dari form untuk custom text
             const title = form.dataset.title || 'Hapus item ini?';
             const text = form.dataset.text || 'Tindakan ini tidak dapat dibatalkan.';
-            const isClearCart = form.id === 'clearCartForm';
+            const isClearCart = form.dataset.title === 'Kosongkan Keranjang?'; // Lebih spesifik
             
             const confirmButtonColor = isClearCart ? '#dc2626' : '#e11d48'; // Merah
             const confirmButtonText = isClearCart ? '<i class="fas fa-trash-alt mr-1"></i> Ya, Kosongkan' : '<i class="fas fa-check mr-1"></i> Ya, hapus';
@@ -256,27 +273,6 @@ document.addEventListener('DOMContentLoaded', function () {
 @keyframes rotate { to { --angle: 360deg; } }
 @property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
 
-/* PERUBAHAN: Tombol Qty Control (Style Boxy/Standard) */
-.qty-adjust-button-v2 { 
-    width: 38px; /* Sedikit lebih lebar */
-    height: 44px; /* Sesuaikan dengan tinggi input */
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.2s ease;
-    border: 1px solid #e5e7eb; /* border-gray-200 */
-}
-.qty-adjust-button-v2.enabled { 
-    background-color: #f9fafb; /* bg-gray-50 */
-    color: #1f2937; /* text-gray-800 */
-} 
-.qty-adjust-button-v2.enabled:hover { 
-    background-color: #f3f4f6; /* bg-gray-100 */
-    border-color: #d1d5db; /* border-gray-300 */
-} 
-.qty-adjust-button-v2.enabled:active { transform: scale(0.95); }
-.qty-adjust-button-v2.disabled { 
-    background-color: #f3f4f6; color: #9ca3af; 
-    cursor: not-allowed; opacity: 0.7; 
-} 
 
 /* Tombol Aksi (Checkout, Jelajahi) */
 .cta-button {
@@ -302,10 +298,20 @@ document.addEventListener('DOMContentLoaded', function () {
 /* Line Clamp & Tabular Nums */
 .line-clamp-2 {
     overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    min-height: 2.25rem; 
+    min-height: 2.25rem; /* Sesuaikan jika perlu */
 }
 .tabular-nums {
     font-variant-numeric: tabular-nums; /* Angka tidak "jiggle" */
+}
+
+/* Menghilangkan panah di input number */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+input[type="number"] {
+    -moz-appearance: textfield; /* Firefox */
 }
 </style>
 @endsection

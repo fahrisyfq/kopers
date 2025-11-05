@@ -50,14 +50,7 @@
                     <p class="text-slate-300 flex items-center"><i class="fas fa-clock fa-fw mr-2 text-emerald-400/50"></i>Senin-Jumat 07.00-15.00</p>
                     <p class="text-slate-300 flex items-center"><i class="fas fa-calendar-times fa-fw mr-2 text-emerald-400/50"></i>Libur nasional tutup</p>
                 </div>
-
-                <h4 class="text-base font-semibold mb-4 text-emerald-300">Pembayaran</h4>
-                <div class="flex gap-3">
-                    <img src="/images/bankDKI.jpg" alt="QRIS" class="bg-white p-1 rounded-md shadow w-14 h-14 object-contain border border-slate-700">
-                    <img src="/images/cash.jpg" alt="Cash" class="bg-white p-1 rounded-md shadow w-14 h-14 object-contain border border-slate-700">
-                </div>
             </div>
-
         </div>
     </div>
 

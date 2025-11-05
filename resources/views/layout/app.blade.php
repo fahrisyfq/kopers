@@ -64,7 +64,7 @@
     class="bg-gray-100 text-gray-900 font-poppins antialiased"
 >
 
-    {{-- ✅ ALERT HANDLER (Kode Asli Dipertahankan) --}}
+    {{-- ✅ ALERT HANDLER --}}
     @if(session('success'))
         <div id="success-alert" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 transition-opacity duration-500 opacity-100" style="min-width: 260px;">
             <i class="fas fa-check-circle text-xl"></i>
@@ -80,33 +80,31 @@
         <script> setTimeout(() => { const el = document.getElementById('error-alert'); if (el) { el.style.opacity = '0'; setTimeout(() => el.remove(), 600); } }, 3000); </script>
     @endif
 
-    {{-- ✅ Navbar (Kode Asli Dipertahankan) --}}
+    {{-- ✅ Navbar --}}
     @include('component.navbar')
 
-    {{-- ✅ Main Content (Kode Asli Dipertahankan) --}}
+    {{-- ✅ Main Content --}}
     <main>
         @yield('content')
     </main>
 
-    {{-- ✅ Footer (Kode Asli Dipertahankan) --}}
+    {{-- ✅ Footer --}}
     @include('component.footer')
 
-    {{-- ✅ Modal Pembayaran QRIS (Kode Asli Dipertahankan) --}}
+    {{-- ✅ Modal Pembayaran QRIS --}}
     <div id="payment-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50">
         {{-- ... (Konten Modal QRIS Anda) ... --}}
     </div>
     
     {{-- 
         ============================================================
-        ==    MODAL PANDUAN (PERBAIKAN ANIMASI BLINK & "ZOOM")     ==
+        ==        MODAL PANDUAN (KODE DIPERBARUI)                 ==
         ============================================================
     --}}
     
     {{-- 1. Overlay (Latar Belakang) --}}
-    {{-- Hanya 'x-show' yang ditaruh di sini. Ini yang mengontrol hidup/matinya modal. --}}
     <div 
         x-show="openPanduan"
-        {{-- Transisi untuk overlay (hanya fade) --}}
         x-transition:enter="ease-out duration-300"
         x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100"
@@ -116,11 +114,9 @@
         x-cloak
         @keydown.escape.window="openPanduan = false"
         class="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-[999] p-4"
-        @click.self="openPanduan = false" {{-- Klik di luar (di overlay) akan menutup --}}
+        @click.self="openPanduan = false" 
     >
         {{-- 2. Konten Modal --}}
-        {{-- [FIX 1] 'x-show' DIHAPUS dari sini untuk menghindari "blink" --}}
-        {{-- [FIX 2] Animasi 'translate-y' diganti menjadi 'scale' agar lebih halus --}}
         <div 
             x-transition:enter="ease-out duration-300"
             x-transition:enter-start="opacity-0 scale-95"
@@ -128,9 +124,8 @@
             x-transition:leave="ease-in duration-200"
             x-transition:leave-start="opacity-100 scale-100"
             x-transition:leave-end="opacity-0 scale-95"
-            class="card w-full max-w-2xl max-h-[90vh] flex flex-col" {{-- .card diterapkan di sini --}}
+            class="card w-full max-w-2xl max-h-[90vh] flex flex-col"
         >
-             {{-- 3. PERBAIKAN SCROLL (Kode Asli Sudah Benar) --}}
             <div class="card__content bg-white/95 backdrop-blur-sm rounded-xl shadow-lg flex flex-col flex-1 overflow-hidden">
                 <div class="flex-shrink-0 flex items-center justify-between p-5 border-b border-gray-200 bg-gradient-to-r from-blue-50/50 to-emerald-50/50 rounded-t-lg">
                     <div class="flex items-center gap-3">
@@ -181,12 +176,12 @@
                                 </div>
                             </div>
                             
-                            {{-- Step 4 --}}
+                            {{-- Step 4 (DIPERBARUI) --}}
                             <div class="flex items-start gap-3">
                                 <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-bold flex items-center justify-center border-2 border-blue-200">4</div>
                                 <div class="flex-1">
                                     <h4 class="font-semibold text-gray-800">Checkout & Pembayaran</h4>
-                                    <p class="text-xs text-gray-600">Di halaman **Keranjang**, pastikan pesanan Anda benar, lalu klik **"Lanjut ke Checkout"**. Di halaman Checkout, pilih item dan metode pembayaran (Cash atau KJP).</p>
+                                    <p class="text-xs text-gray-600">Di halaman **Keranjang**, pastikan pesanan Anda benar, lalu klik **"Lanjut ke Checkout"**. Di halaman Checkout, pilih item dan metode pembayaran (Cash, KJP, **QRIS**, atau **Transfer Bank (BCA)**).</p>
                                 </div>
                             </div>
                             
@@ -215,7 +210,7 @@
                              </div>
                         </div>
                         
-                         <div class="flex items-start gap-3">
+                         <div class="flex items-start gap-3 mb-4"> {{-- (DIPERBARUI) --}}
                              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
                                  <i class="fas fa-money-bill-wave"></i>
                              </div>
@@ -225,9 +220,28 @@
                                       <strong>Cash:</strong> Setelah memesan, Anda harus datang ke koperasi untuk membayar dan mengkonfirmasi pesanan agar dapat diproses.
                                       <br>
                                       <strong>KJP:</strong> Admin akan mencatat penggunaan dana KJP Anda. Anda tidak perlu membayar tunai.
+                                      <br>
+                                      <strong>QRIS:</strong> Bayar langsung dari HP Anda. Scan kode QR yang muncul saat checkout. Pesanan akan otomatis terkonfirmasi setelah pembayaran berhasil.
+                                      <br>
+                                      {{-- (BARU) Menambahkan info Transfer Bank --}}
+                                      <strong>Transfer Bank (BCA):</strong> Anda akan menerima nomor rekening tujuan setelah checkout. Harap transfer sesuai total dan **upload bukti transfer** di halaman "Pesanan Saya" agar pesanan dapat dikonfirmasi oleh admin.
                                  </p>
                              </div>
-                        </div>
+                         </div>
+                         
+                         {{-- (BARU) Menambahkan info Pengambilan Barang --}}
+                         <div class="flex items-start gap-3">
+                             <div class="flex-shrink-0 w-8 h-8 rounded-full bg-cyan-100 text-cyan-600 flex items-center justify-center">
+                                 <i class="fas fa-box-open"></i>
+                             </div>
+                             <div class="flex-1">
+                                 <h4 class="font-semibold text-gray-800">Tentang Pengambilan Barang</h4>
+                                 <p class="text-xs text-gray-600">
+                                      Setelah pesanan Anda berstatus **"Siap Diambil"** (cek di halaman 'Pesanan Saya'), Anda dapat mengambil barang di koperasi dengan menunjukkan detail pesanan Anda kepada admin.
+                                 </p>
+                             </div>
+                         </div>
+
                     </section>
                 </div>
 
@@ -243,7 +257,7 @@
     {{-- ✅ Akhir Modal Panduan --}}
 
 
-    {{-- ✅ Script Section (Kode Asli Dipertahankan) --}}
+    {{-- ✅ Script Section --}}
     @livewireScripts
     @stack('scripts')
     @vite('resources/js/app.js')
@@ -255,7 +269,9 @@
             if (form) {
                 form.addEventListener('submit', function(e) {
                     const input = form.querySelector('input[name="transfer_proof"]');
-                    if (input && (!input.files || input.files.length === 0)) {
+                    // (DIPERBARUI) Validasi ini hanya berlaku jika metode transfer dipilih
+                    const paymentMethod = form.querySelector('input[name="payment_method"]:checked');
+                    if (paymentMethod && paymentMethod.value === 'transfer' && input && (!input.files || input.files.length === 0)) {
                         alert('Silakan upload minimal 1 bukti transfer sebelum konfirmasi pembayaran.');
                         input.focus();
                         e.preventDefault();

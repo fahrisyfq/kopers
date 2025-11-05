@@ -41,8 +41,30 @@
             </div>
         @endif
 
-
-        <form id="checkout-form" action="{{ route('cart.checkout') }}" method="POST" enctype="multipart/form-data">
+        {{-- x-data di tag <form> sekarang mengontrol semuanya --}}
+        <form id="checkout-form" action="{{ route('cart.checkout') }}" method="POST" enctype="multipart/form-data" 
+            x-data="{
+                payment: '{{ old('payment_method') ?? 'cash' }}', 
+                qrisModalOpen: false, 
+                copyTextBCA: 'Salin', 
+                copyTextMandiri: 'Salin',
+                copyToClipboard(text, bank) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        if (bank === 'bca') {
+                            this.copyTextBCA = 'Disalin!';
+                            this.copyTextMandiri = 'Salin';
+                            setTimeout(() => { this.copyTextBCA = 'Salin' }, 2000);
+                        } else if (bank === 'mandiri') {
+                            this.copyTextMandiri = 'Disalin!';
+                            this.copyTextBCA = 'Salin';
+                            setTimeout(() => { this.copyTextMandiri = 'Salin' }, 2000);
+                        }
+                    }).catch(err => {
+                        console.error('Gagal menyalin: ', err);
+                        alert('Gagal menyalin nomor rekening.');
+                    });
+                }
+            }">
             @csrf
 
             <div class="grid grid-cols-1 lg:grid-cols-3 lg:gap-8 xl:gap-12">
@@ -53,14 +75,10 @@
                     {{-- 🛒 Daftar Produk --}}
                     <div class="grid gap-4">
                         @forelse($cart as $key => $item)
-                            {{-- ====================================================== --}}
-                            {{-- [FIXED] KARTU PRODUK DIBUAT RESPONSIVE --}}
-                            {{-- ====================================================== --}}
-                            {{-- items-start agar checkbox & gambar align ke atas di mobile --}}
                             <div class="flex items-start gap-4 bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-lg transition-all duration-300 group">
                                 
                                 {{-- Checkbox --}}
-                                <div class="flex-shrink-0 pt-1"> {{-- Diberi pt-1 agar sejajar dgn teks --}}
+                                <div class="flex-shrink-0 pt-1"> 
                                     <input type="checkbox" name="selected[]" value="{{ $key }}" class="select-item w-5 h-5 accent-emerald-600 cursor-pointer rounded-md shadow-sm border-gray-300">
                                 </div>
                                 
@@ -74,8 +92,7 @@
                                     @endif
                                 </div>
                                 
-                                {{-- [NEW] Wrapper untuk Info & Harga --}}
-                                {{-- Ini akan stack di mobile (flex-col) dan jadi baris di desktop (sm:flex-row) --}}
+                                {{-- Wrapper untuk Info & Harga --}}
                                 <div class="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between min-w-0">
                                     
                                     {{-- Info Produk --}}
@@ -97,8 +114,6 @@
                                     </div>
                                     
                                     {{-- Harga --}}
-                                    {{-- mt-2 (mobile), sm:mt-0 (desktop) --}}
-                                    {{-- text-left (mobile), sm:text-right (desktop) --}}
                                     <div class="flex-shrink-0 text-left sm:text-right sm:pl-4 mt-2 sm:mt-0">
                                         <p class="text-emerald-600 font-bold text-base sm:text-lg">
                                             Rp {{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}
@@ -106,9 +121,6 @@
                                     </div>
                                 </div>
                             </div>
-                            {{-- ====================================================== --}}
-                            {{-- AKHIR PERBAIKAN KARTU PRODUK --}}
-                            {{-- ====================================================== --}}
                         @empty
                             <div class="text-center text-gray-500 py-12 px-6 bg-white rounded-2xl shadow-sm border border-gray-100">
                                 <i class="fas fa-shopping-cart text-4xl mb-4 text-emerald-500"></i>
@@ -118,8 +130,8 @@
                         @endforelse
                     </div>
 
-                    {{-- 💳 Metode Pembayaran (Sesuai V5) --}}
-                    <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-lg transition" x-data="{ payment: '{{ old('payment_method') ?? 'cash' }}' }">
+                    {{-- 💳 Metode Pembayaran --}}
+                    <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-lg transition">
                         <h3 class="text-gray-800 font-semibold text-lg mb-4 flex items-center gap-2">
                             <i class="fas fa-credit-card text-emerald-600"></i> Metode Pembayaran
                         </h3>
@@ -128,8 +140,10 @@
                             @php
                                 $payments = [
                                     ['id' => 'cash', 'icon' => 'fa-money-bill-wave', 'label' => 'Cash', 'desc' => 'Bayar langsung di kasir.'],
-                                    ['id' => 'kjp', 'icon' => 'fa-id-card', 'label' => 'KJP (Bank DKI)', 'desc' => 'Gunakan saldo kartu KJP Anda.'],
-                                    ['id' => 'transfer_bank', 'icon' => 'fa-building-columns', 'label' => 'Transfer Bank', 'desc' => 'Bayar via rekening BCA.'],
+                                    // [PERBAIKAN] Deskripsi KJP diubah
+                                    ['id' => 'kjp', 'icon' => 'fa-id-card', 'label' => 'KJP (Bank DKI)', 'desc' => 'Bayar di kasir dengan gesek/tap kartu.'],
+                                    // [PERBAIKAN] Deskripsi Transfer diubah
+                                    ['id' => 'transfer_bank', 'icon' => 'fa-building-columns', 'label' => 'Transfer Bank', 'desc' => 'Transfer manual ke rekening bank.'],
                                     ['id' => 'e_wallet', 'icon' => 'fa-qrcode', 'label' => 'E-Wallet / QRIS', 'desc' => 'Scan QRIS untuk pembayaran cepat.'],
                                 ];
                             @endphp
@@ -137,14 +151,21 @@
                             @foreach($payments as $p)
                                 <label 
                                     @click="payment = '{{ $p['id'] }}'"
-                                    class="relative flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all duration-300 border-2"
+                                    class="relative flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all duration-300 transform border-2"
                                     :class="{
-                                        'bg-emerald-50 border-emerald-400 shadow-lg': payment === '{{ $p['id'] }}',
-                                        'bg-white border-gray-200 hover:bg-gray-50 shadow-sm': payment !== '{{ $p['id'] }}'
+                                        'bg-emerald-50 border-emerald-400 shadow-lg scale-[1.02]': payment === '{{ $p['id'] }}',
+                                        'bg-white border-gray-200 hover:bg-white hover:border-emerald-300 hover:shadow-lg hover:-translate-y-1 shadow-sm': payment !== '{{ $p['id'] }}'
                                     }"
                                 >
-                                    <div x-show="payment === '{{ $p['id'] }}'" x-transition
-                                         class="absolute top-2 right-2 w-5 h-5 flex items-center justify-center rounded-full bg-emerald-600 text-white" style="display: none;">
+                                    <div x-show="payment === '{{ $p['id'] }}'" 
+                                         x-transition:enter="ease-out duration-200"
+                                         x-transition:enter-start="opacity-0 scale-75"
+                                         x-transition:enter-end="opacity-100 scale-100"
+                                         x-transition:leave="ease-in duration-100"
+                                         x-transition:leave-start="opacity-100 scale-100"
+                                         x-transition:leave-end="opacity-0 scale-75"
+                                         class="absolute top-2 right-2 w-5 h-5 flex items-center justify-center rounded-full bg-emerald-600 text-white" 
+                                         style="display: none;">
                                         <i class="fas fa-check text-xs"></i>
                                     </div>
                                     
@@ -175,38 +196,74 @@
                             @endforeach
                         </div>
 
-                        {{-- Info QRIS & Bank (Sesuai V5) --}}
+                        {{-- Info QRIS & Bank (Desain Baru) --}}
                         <div x-show="payment === 'transfer_bank' || payment === 'e_wallet'" x-transition 
                              class="mt-6 pt-5 border-t border-gray-200" style="display: none;" x-cloak>
                             
-                            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-5">
+                            <div class="bg-gray-50 p-5 rounded-xl border border-gray-200 space-y-6">
                                 
+                                {{-- Bagian Transfer Bank (dengan Tombol Salin) --}}
                                 <div x-show="payment === 'transfer_bank'" style="display: none;">
-                                    <h4 class="font-semibold text-emerald-700 text-sm mb-2">Silakan transfer ke rekening:</h4>
-                                    <div class="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-                                        <img src="images/images.png" alt="BCA" class="h-4">
-                                        <div class="flex-1">
-                                            <p class="text-gray-700 text-sm">a.n <span class="font-semibold">Koperasi SMKN 8</span></p>
-                                            <p class="text-gray-900 font-bold text-base tracking-wider">123 456 7890</p>
+                                    <h4 class="font-semibold text-emerald-700 text-sm mb-3">Silakan transfer ke rekening:</h4>
+                                    <div class="space-y-3">
+                                        {{-- Rekening 1 (Contoh: Mandiri) --}}
+                                        <div class="flex items-center gap-3 bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm">
+                                            <img src="images/images.png" alt="Mandiri" class="h-4">
+                                            <div class="flex-1">
+                                                <p class="text-gray-700 text-sm">a.n <span class="font-semibold">Koperasi SMKN 8</span></p>
+                                                <code class="text-gray-900 font-bold text-base tracking-wider">123 456 7890</code>
+                                            </div>
+                                            <button 
+                                                type="button" 
+                                                @click="copyToClipboard('1234567890', 'mandiri')"
+                                                class="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors"
+                                                :class="copyTextMandiri === 'Salin' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-green-100 text-green-700'"
+                                                x-text="copyTextMandiri">
+                                                Salin
+                                            </button>
                                         </div>
-                                    </div>
-                                    <div class="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-                                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Bank_Central_Asia_logo.svg/2560px-Bank_Central_Asia_logo.svg.png" alt="BCA" class="h-4">
-                                        <div class="flex-1">
-                                            <p class="text-gray-700 text-sm">a.n <span class="font-semibold">Koperasi SMKN 8</span></p>
-                                            <p class="text-gray-900 font-bold text-base tracking-wider">123 456 7890</p>
+                                        {{-- Rekening 2 (BCA) --}}
+                                        <div class="flex items-center gap-3 bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm">
+                                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Bank_Central_Asia_logo.svg/2560px-Bank_Central_Asia_logo.svg.png" alt="BCA" class="h-4">
+                                            <div class="flex-1">
+                                                <p class="text-gray-700 text-sm">a.n <span class="font-semibold">Koperasi SMKN 8</span></p>
+                                                <code class="text-gray-900 font-bold text-base tracking-wider">098 765 4321</code>
+                                            </div>
+                                            <button 
+                                                type="button" 
+                                                @click="copyToClipboard('0987654321', 'bca')"
+                                                class="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors"
+                                                :class="copyTextBCA === 'Salin' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-green-100 text-green-700'"
+                                                x-text="copyTextBCA">
+                                                Salin
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div x-show="payment === 'e_wallet'" style="display: none;" class="flex flex-col items-center">
-                                    <h4 class="font-semibold text-emerald-700 text-sm mb-2">Scan QRIS untuk pembayaran:</h4>
-                                    <div class="p-2 bg-white rounded-lg shadow-md border border-gray-200">
-                                        <img src="{{ asset('images/qris1.jpg') }}" alt="QRIS Koperasi" class="w-44 sm:w-48 rounded-lg">
+                                {{-- Bagian QRIS (Bisa diperbesar + download) --}}
+                                <div x-show="payment === 'e_wallet'" style="display: none;">
+                                    <h4 class="font-semibold text-emerald-700 text-sm mb-3 text-center">Scan QRIS untuk pembayaran:</h4>
+                                    <div class="flex flex-col items-center">
+                                        <div class="relative group w-48 sm:w-52">
+                                            <img src="{{ asset('images/qris1.jpg') }}" alt="QRIS Koperasi" 
+                                                 class="w-full rounded-lg shadow-md border border-gray-200 bg-white p-2 cursor-pointer"
+                                                 @click="qrisModalOpen = true">
+                                            <div @click="qrisModalOpen = true" 
+                                                 class="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer">
+                                                <i class="fas fa-search-plus text-white text-3xl"></i>
+                                            </div>
+                                        </div>
+                                        <a href="{{ asset('images/qris1.jpg') }}" download="QRIS-Koperasi-SMKN8.jpg"
+                                           class="inline-flex items-center justify-center gap-2 text-sm font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200 transition-colors px-4 py-2 rounded-lg mt-4">
+                                            <i class="fas fa-download text-xs"></i>
+                                            Download QRIS
+                                        </a>
                                     </div>
                                 </div>
 
-                                <div class="pt-2">
+                                {{-- Bagian Upload Bukti --}}
+                                <div class="pt-5 border-t border-gray-200">
                                     <label class="block font-medium text-gray-800 text-sm mb-1.5">Upload Bukti Pembayaran:</label>
                                     <input type="file" name="proof_of_payment" accept="image/*,.pdf"
                                            class="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer bg-white
@@ -270,9 +327,43 @@
     </div>
 </div>
 
-{{-- Script (Tidak diubah, sudah benar) --}}
+{{-- Modal untuk Perbesar QRIS --}}
+<div x-show="qrisModalOpen" 
+     x-transition:enter="ease-out duration-300"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="ease-in duration-200"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     @keydown.escape.window="qrisModalOpen = false"
+     class="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" 
+     x-cloak>
+    
+    <div class="relative max-w-sm w-full" @click.outside="qrisModalOpen = false">
+        <button @click="qrisModalOpen = false" class="absolute -top-4 -right-4 w-10 h-10 flex items-center justify-center bg-white rounded-full text-gray-700 hover:text-red-500 transition-colors shadow-lg">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+        <img src="{{ asset('images/qris1.jpg') }}" alt="Scan QRIS" class="w-full rounded-2xl border-4 border-white shadow-2xl">
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    
+    // Fungsi untuk memutar suara
+    function playCheckoutSound() {
+        try {
+            if ('speechSynthesis' in window) {
+                const message = new SpeechSynthesisUtterance();
+                message.text = "terimakasih telah checkout produk ini";
+                message.lang = 'id-ID';
+                window.speechSynthesis.speak(message);
+            }
+        } catch (e) {
+            console.warn("Speech Synthesis tidak didukung atau gagal: ", e);
+        }
+    }
+
     const checkboxes = document.querySelectorAll('.select-item');
     const totalAmount = document.getElementById('total-amount');
     const subtotalAmount = document.getElementById('subtotal-amount');
@@ -339,7 +430,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return; 
             }
             
-            checkoutForm.submit();
+            // Panggil suara
+            playCheckoutSound();
+            
+            // Tunda submit sedikit agar suara sempat terputar
+            setTimeout(() => {
+                checkoutForm.submit();
+            }, 300); // Penundaan 300ms
         });
     }
 

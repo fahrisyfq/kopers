@@ -1,4 +1,10 @@
-<x-filament::page>
+{{-- [PERBAIKAN 1] Tambahkan x-data untuk modal pop-up --}}
+<x-filament::page
+    x-data="{
+        proofModalOpen: false,
+        currentProofUrl: ''
+    }"
+>
     <div class="space-y-6">
         {{-- 🔹 Header --}}
         <div class="flex items-center justify-between">
@@ -10,14 +16,14 @@
             </div>
         </div>
 
-        {{-- 🔹 Filter Dropdown & Search Bar --}}
-        <div class="flex flex-wrap items-end gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+        {{-- 🔹 Filter Dropdown & Search Bar (Dengan Indikator Loading) --}}
+        <div wire:loading.class.delay="opacity-50" class="flex flex-wrap items-end gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
             {{-- Filter Kelas --}}
             <div>
                 <label class="block text-xs font-semibold text-gray-600 mb-1">Filter Kelas</label>
                 <select
                     wire:model.live="selectedKelas"
-                    class="text-sm border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-300 focus:border-blue-400"
+                    class="text-sm border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-300 focus:border-blue-400 shadow-sm"
                 >
                     <option value="">Semua Kelas</option>
                     <option value="10">10</option>
@@ -32,7 +38,7 @@
                 <label class="block text-xs font-semibold text-gray-600 mb-1">Filter Jurusan</label>
                 <select
                     wire:model.live="selectedJurusan"
-                    class="text-sm border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-300 focus:border-blue-400"
+                    class="text-sm border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-300 focus:border-blue-400 shadow-sm"
                 >
                     <option value="">Semua Jurusan</option>
                     <option value="AKL 1">AKL 1</option>
@@ -50,166 +56,201 @@
             </div>
 
             {{-- 🔍 Search Nama Siswa --}}
-            <div class="flex-1 min-w-[200px]">
+            <div class="flex-1 min-w-[250px] relative">
                 <label class="block text-xs font-semibold text-gray-600 mb-1">Cari Nama Siswa</label>
-                <input
-                    type="text"
-                    wire:model.live="searchTerm"
-                    placeholder="Ketik nama siswa..."
-                    class="w-full text-sm border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-300 focus:border-blue-400"
-                >
+                <div class="relative">
+                    <input
+                        type="text"
+                        wire:model.live.debounce.300ms="searchTerm"
+                        placeholder="Ketik nama siswa..."
+                        class="w-full text-sm border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:ring-blue-300 focus:border-blue-400 shadow-sm"
+                    >
+                    <x-heroicon-o-magnifying-glass class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                </div>
+            </div>
+            
+            {{-- Indikator Loading --}}
+            <div wire:loading.delay wire:target="selectedKelas, selectedJurusan, searchTerm" class="text-blue-600">
+                <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
             </div>
         </div>
 
-        {{-- 🔹 Tidak ada data --}}
+        {{-- 🔹 Tidak ada data (Desain Baru) --}}
         @if($usersWithPreOrders->isEmpty())
-            <div class="p-6 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-700 flex items-center gap-3">
-                <x-heroicon-o-exclamation-triangle class="w-6 h-6 text-yellow-500" />
-                <span>Tidak ada pesanan pre-order saat ini.</span>
+            <div class="flex flex-col items-center justify-center p-12 bg-white rounded-xl shadow-sm border border-gray-100 text-center">
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                    <x-heroicon-o-exclamation-triangle class="w-8 h-8" />
+                </div>
+                <h3 class="mt-4 text-lg font-bold text-gray-800">Tidak Ada Pre-Order Ditemukan</h3>
+                <p class="mt-1 text-sm text-gray-500">Tidak ada siswa yang cocok dengan filter Anda saat ini.</p>
             </div>
         @else
-            {{-- 🔹 Tabel utama --}}
-            <div class="overflow-x-auto bg-white shadow-lg rounded-xl border border-gray-100">
-                <table class="min-w-full text-sm text-gray-700 border-collapse">
-                    <thead class="bg-gradient-to-r from-blue-50 to-indigo-50 text-gray-700 font-semibold">
-                        <tr>
-                            <th class="px-4 py-3 border text-left">NISN</th>
-                            <th class="px-4 py-3 border text-left">NIS</th>
-                            <th class="px-4 py-3 border text-left">Nama Lengkap</th>
-                            <th class="px-4 py-3 border text-left">Kelas</th>
-                            <th class="px-4 py-3 border text-left">Jurusan</th>
-                            <th class="px-4 py-3 border text-left">Produk Pre-Order</th>
-                        </tr>
-                    </thead>
+            {{-- 🔹 Tampilan Kartu (Desain Baru) --}}
+            <div class="space-y-6">
+                @foreach ($usersWithPreOrders as $user)
+                    <div class="bg-white rounded-xl shadow-lg border border-gray-100 divide-y divide-gray-200 overflow-hidden">
+                        
+                        {{-- Header Kartu: Info Siswa & Tombol Kontak --}}
+                        <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">{{ $user->nama_lengkap }}</h3>
+                                <div class="mt-1 flex items-center flex-wrap gap-x-3 gap-y-1 text-sm text-gray-600">
+                                    <span>
+                                        <x-heroicon-s-academic-cap class="w-4 h-4 inline -mt-0.5 mr-1 text-gray-400" />
+                                        {{ $user->kelas ?? '?' }} - {{ $user->jurusan ?? '?' }}
+                                    </span>
+                                    <span class="hidden sm:inline">&middot;</span>
+                                    <span>
+                                        <x-heroicon-s-identification class="w-4 h-4 inline -mt-0.5 mr-1 text-gray-400" />
+                                        NISN: <span class="font-medium text-gray-800">{{ $user->nisn ?? '-' }}</span>
+                                        
+                                        {{-- [PERBAIKAN 2] NIS DITAMBAHKAN KEMBALI --}}
+                                        <span class="text-gray-300 mx-1">|</span>
+                                        NIS: <span class="font-medium text-gray-800">{{ $user->nis ?? '-' }}</span>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {{-- Tombol Kontak --}}
+                            <div class="flex-shrink-0 flex items-center gap-2">
+                                <button 
+                                    wire:click="contactUser({{ $user->id }})"
+                                    class="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg text-white shadow-md hover:shadow-lg transition-all duration-200 active:scale-95"
+                                    style="background: linear-gradient(to right, #2563eb, #3b82f6);"
+                                >
+                                    <x-heroicon-o-user class="w-4 h-4 text-white" />
+                                    Hubungi Siswa
+                                </button>
+                                <button 
+                                    wire:click="contactParent({{ $user->id }})"
+                                    class="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg text-white shadow-md hover:shadow-lg transition-all duration-200 active:scale-95"
+                                    style="background: linear-gradient(to right, #16a34a, #22c55e);"
+                                >
+                                    <x-heroicon-o-chat-bubble-left-right class="w-4 h-4 text-white" />
+                                    Hubungi Ortu
+                                </button>
+                            </div>
+                        </div>
 
-                    <tbody>
-                        @foreach ($usersWithPreOrders as $user)
-                            <tr class="hover:bg-blue-50/40 transition-colors">
-                                <td class="px-4 py-2 border">{{ $user->nisn }}</td>
-                                <td class="px-4 py-2 border">{{ $user->nis }}</td>
-                                <td class="px-4 py-2 border font-medium text-gray-800">{{ $user->nama_lengkap }}</td>
-                                <td class="px-4 py-2 border">{{ $user->kelas }}</td>
-                                <td class="px-4 py-2 border">{{ $user->jurusan }}</td>
-
-                                {{-- Produk Pre-Order --}}
-                                <td class="px-4 py-2 border">
-                                    @foreach ($user->orders as $order)
-                                        @foreach ($order->items as $item)
-                                            <div
-                                                class="p-3 mb-2 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-lg shadow-sm hover:shadow transition"
-                                            >
-                                                <div class="flex justify-between items-start">
-                                                    <div class="flex gap-2">
-                                                        <input
-                                                            type="checkbox"
-                                                            wire:model="selectedItems.{{ $item->id }}"
-                                                            class="mt-1 text-blue-600 rounded focus:ring-blue-400"
-                                                        >
-                                                        <div>
-                                                            <div class="font-semibold text-gray-900">
-                                                                {{ $item->product->title ?? '-' }}
-                                                            </div>
-
-                                                            @if($item->productSize)
-                                                                <div class="text-xs text-gray-600">
-                                                                    Ukuran: {{ $item->productSize->size }}
-                                                                </div>
-                                                            @endif
-
-                                                            <div class="text-xs text-gray-700 mt-1">
-                                                                💰 Harga:
-                                                                <span class="font-medium text-gray-800">
-                                                                    Rp{{ number_format($item->price ?? 0, 0, ',', '.') }}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {{-- 🟢 BAGIAN YANG DIPERBARUI 🟢 --}}
-                                                    <div class="text-right space-y-2 flex-shrink-0 ml-4">
-                                                        
-                                                        {{-- 1. Badge Metode Pembayaran --}}
-                                                        <div>
-                                                            @php
-                                                                $method = $order->payment_method;
-                                                                $color = match($method) {
-                                                                    'cash' => 'bg-green-100 text-green-700',
-                                                                    'kjp' => 'bg-blue-100 text-blue-700',
-                                                                    'transfer_bank' => 'bg-yellow-100 text-yellow-700',
-                                                                    'e_wallet' => 'bg-purple-100 text-purple-700',
-                                                                    default => 'bg-gray-100 text-gray-700',
-                                                                };
-                                                                $label = match($method) {
-                                                                    'cash' => 'Cash',
-                                                                    'kjp' => 'KJP',
-                                                                    'transfer_bank' => 'Transfer',
-                                                                    'e_wallet' => 'E-Wallet',
-                                                                    default => $method,
-                                                                };
-                                                            @endphp
-                                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ $color }}">
-                                                                {{ $label }}
-                                                            </span>
-                                                        </div>
-
-                                                        {{-- 2. Link Bukti Pembayaran (jika ada) --}}
-                                                        @if($order->proof_of_payment)
-                                                            <a href="{{ asset('storage/' . $order->proof_of_payment) }}" 
-                                                               target="_blank" 
-                                                               class="text-xs text-blue-600 hover:underline font-medium flex items-center justify-end gap-1">
-                                                                Lihat Bukti
-                                                                <x-heroicon-o-arrow-top-right-on-square class="w-3 h-3" />
-                                                            </a>
-                                                        @endif
-                                                        
-                                                        {{-- 3. Dropdown Status Pembayaran --}}
-                                                        <select
-                                                            wire:model="statuses.{{ $order->id }}"
-                                                            wire:change="updateStatus({{ $order->id }})"
-                                                            class="text-xs bg-white border-gray-300 rounded-lg px-2 py-1 focus:ring focus:ring-blue-200 focus:border-blue-400"
-                                                        >
-                                                            <option value="pending">Pending</option>
-                                                            <option value="cash">Cash</option>
-                                                            <option value="paid">Paid</option>
-                                                        </select>
-                                                    </div>
-                                                    {{-- 🟢 AKHIR BAGIAN YANG DIPERBARUI 🟢 --}}
-
-                                                </div>
+                        {{-- Body Kartu: Daftar Pre-Order --}}
+                        <div class="p-4 sm:p-5 space-y-3 bg-gray-50/50">
+                            @foreach ($user->orders as $order)
+                                @foreach ($order->items as $item)
+                                    <div class="flex items-start gap-3 p-3.5 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl shadow-sm transition hover:shadow-md">
+                                        
+                                        {{-- Checkbox --}}
+                                        <input
+                                            type="checkbox"
+                                            wire:model="selectedItems.{{ $item->id }}"
+                                            class="mt-1 h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-400 focus:ring-offset-0"
+                                        >
+                                        
+                                        {{-- Info Produk (Kiri) --}}
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-semibold text-gray-900 truncate">
+                                                {{ $item->product->title ?? '-' }}
                                             </div>
-                                        @endforeach
-                                    @endforeach
+                                            @if($item->productSize)
+                                                <div class="text-xs text-gray-600">
+                                                    Ukuran: {{ $item->productSize->size }}
+                                                </div>
+                                            @endif
+                                            <div class="text-sm text-gray-700 mt-1">
+                                                <span class="font-medium text-gray-800">
+                                                    Rp{{ number_format($item->price ?? 0, 0, ',', '.') }}
+                                                </span>
+                                            </div>
+                                        </div>
 
-                                    {{-- 🔹 Tombol WhatsApp --}}
-                                    <div class="flex gap-3 mt-4">
-                                        {{-- Tombol Siswa --}}
-                                        <button 
-                                            wire:click="contactUser({{ $user->id }})"
-                                            class="flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-lg text-white shadow-md hover:shadow-lg transition-all duration-200 active:scale-95"
-                                            style="background: linear-gradient(to right, #2563eb, #3b82f6);"
-                                        >
-                                            <x-heroicon-o-user class="w-4 h-4 text-white" />
-                                            Hubungi Siswa
-                                        </button>
+                                        {{-- Info Status (Kanan) --}}
+                                        <div class="text-right space-y-2 flex-shrink-0 ml-4 flex flex-col items-end">
+                                            
+                                            {{-- Badge Metode Pembayaran --}}
+                                            <div>
+                                                @php
+                                                    $method = $order->payment_method;
+                                                    $color = match($method) {
+                                                        'cash' => 'bg-green-100 text-green-700',
+                                                        'kjp' => 'bg-blue-100 text-blue-700',
+                                                        'transfer_bank' => 'bg-yellow-100 text-yellow-700',
+                                                        'e_wallet' => 'bg-purple-100 text-purple-700',
+                                                        default => 'bg-gray-100 text-gray-700',
+                                                    };
+                                                    $label = match($method) {
+                                                        'cash' => 'Cash',
+                                                        'kjp' => 'KJP',
+                                                        'transfer_bank' => 'Transfer',
+                                                        'e_wallet' => 'E-Wallet',
+                                                        default => $method,
+                                                    };
+                                                @endphp
+                                                <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ $color }}">
+                                                    {{ $label }}
+                                                </span>
+                                            </div>
 
-                                        {{-- Tombol Orang Tua --}}
-                                        <button 
-                                            wire:click="contactParent({{ $user->id }})"
-                                            class="flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-lg text-white shadow-md hover:shadow-lg transition-all duration-200 active:scale-95"
-                                            style="background: linear-gradient(to right, #16a34a, #22c55e);"
-                                        >
-                                            <x-heroicon-o-chat-bubble-left-right class="w-4 h-4 text-white" />
-                                            Hubungi Orang Tua
-                                        </button>
+                                            {{-- [PERBAIKAN 3] Link diubah jadi tombol modal --}}
+                                            @if($order->proof_of_payment)
+                                                <button 
+                                                   type="button"
+                                                   wire:key="proof-{{ $order->id }}"
+                                                   @click="currentProofUrl = '{{ asset('storage/' . $order->proof_of_payment) }}'; proofModalOpen = true;"
+                                                   class="text-xs text-blue-600 hover:underline font-medium flex items-center justify-end gap-1">
+                                                    Lihat Bukti
+                                                    <x-heroicon-o-eye class="w-3 h-3" />
+                                                </button>
+                                            @endif
+                                            
+                                            {{-- Dropdown Status Pembayaran --}}
+                                            <select
+                                                wire:model="statuses.{{ $order->id }}"
+                                                wire:change="updateStatus({{ $order->id }})"
+                                                class="text-xs bg-white border-gray-300 rounded-lg px-2 py-1 focus:ring focus:ring-blue-200 focus:border-blue-400 shadow-sm"
+                                            >
+                                                <option value="pending">Pending</option>
+                                                <option value="cash">Cash</option>
+                                                <option value="paid">Paid</option>
+                                            </select>
+                                        </div>
                                     </div>
-
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                                @endforeach
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
             </div>
         @endif
+    </div>
+
+    {{-- 🔹 Modal Lihat Bukti Pembayaran (BARU) --}}
+    <div
+        x-show="proofModalOpen"
+        x-transition:enter="ease-out duration-300"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="ease-in duration-200"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        @keydown.escape.window="proofModalOpen = false"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+        style="display: none;"
+        x-cloak
+    >
+        <div @click.outside="proofModalOpen = false" class="relative w-full max-w-lg rounded-xl shadow-2xl">
+            {{-- Tombol 'X' Sesuai Permintaan --}}
+            <button
+                @click="proofModalOpen = false"
+                class="absolute -top-3 -right-3 z-10 w-10 h-10 flex items-center justify-center bg-white rounded-full text-gray-700 hover:text-red-500 transition-colors shadow-lg">
+                <x-heroicon-o-x-mark class="w-6 h-6" />
+            </button>
+            
+            <div class="overflow-hidden rounded-lg border-4 border-white">
+                <img :src="currentProofUrl" alt="Bukti Pembayaran" class="w-full h-auto max-h-[80vh] object-contain">
+            </div>
+        </div>
     </div>
 
     {{-- 🔹 Script --}}
@@ -220,5 +261,4 @@
             });
         });
     </script>
-
 </x-filament::page>
