@@ -3,8 +3,27 @@
 @section('title', 'Katalog Produk')
 
 @section('content')
+{{-- Asumsi variabel $isStoreOpen (boolean) tersedia dari ProductController --}}
+@php
+    // Fallback jika $isStoreOpen tidak dikirimkan dari controller
+    $isStoreOpen = $isStoreOpen ?? true; 
+@endphp
+
 <div class="pt-28 pb-20 bg-gradient-to-br from-blue-50 via-white to-emerald-50 min-h-screen font-poppins">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+
+        {{-- 💡 BANNER PERINGATAN TOKO TUTUP --}}
+        @if(!$isStoreOpen)
+        <div class="bg-red-500/10 border border-red-200 text-red-700 px-4 py-3 rounded-lg relative mb-8 shadow-md animate-fadeIn" role="alert">
+            <div class="flex items-center">
+                <i class="fas fa-store-slash text-xl mr-3"></i>
+                <div>
+                    <strong class="font-bold">PEMBERITAHUAN PENTING!</strong>
+                    <span class="block sm:inline text-sm font-semibold"> Toko sedang Non-aktif. Produk tidak dapat dipesan saat ini.</span>
+                </div>
+            </div>
+        </div>
+        @endif
 
         {{-- 🛍️ Header Katalog Produk --}}
         <div class="flex flex-col sm:flex-row items-center justify-between mb-10 border-b border-gray-200 pb-5">
@@ -14,7 +33,7 @@
                 </div>
                 <div>
                     <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight 
-                               text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-emerald-500 to-teal-500">
+                                 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-emerald-500 to-teal-500">
                         Katalog Produk
                     </h1>
                     <p class="text-sm text-gray-500 mt-0.5">
@@ -24,10 +43,10 @@
             </div>
             <button id="sizeGuideBtn" 
                     class="relative flex items-center gap-2 px-5 py-2.5 rounded-lg 
-                           bg-gradient-to-r from-blue-600 to-cyan-500 
-                           text-white text-sm font-semibold shadow-md 
-                           hover:from-blue-500 hover:to-cyan-400 hover:shadow-lg 
-                           transition-all duration-300 ease-in-out group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            bg-gradient-to-r from-blue-600 to-cyan-500 
+                            text-white text-sm font-semibold shadow-md 
+                            hover:from-blue-500 hover:to-cyan-400 hover:shadow-lg 
+                            transition-all duration-300 ease-in-out group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                  <span class="button-glow"></span>
                 <span class="relative z-10 flex items-center gap-2">
                     <i class="fas fa-ruler-combined text-sm group-hover:rotate-6 transition-transform duration-300"></i>
@@ -75,35 +94,50 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 md:gap-6">
                 @foreach($seragamProducts as $product)
                     @php $totalStock = $product->sizes->sum('stock'); @endphp
-                    <a href="{{ route('product.show', $product->id) }}" class="group product-card block">
-                        <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 transition-all duration-300 ease-out hover:shadow-xl hover:-translate-y-1.5 flex flex-col h-full">
+                    
+                    {{-- 💡 START: KONTROL LINK BERDASARKAN STATUS TOKO --}}
+                    @if($isStoreOpen)
+                        <a href="{{ route('product.show', $product->id) }}" class="group product-card block">
+                    @else
+                        {{-- Jika toko tutup, gunakan div dan cursor-not-allowed --}}
+                        <div class="group product-card block cursor-not-allowed"> 
+                    @endif
+                        
+                        {{-- 💡 KONTROL STYLE: Tambahkan grayscale dan opacity jika toko tutup --}}
+                        <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 
+                                    transition-all duration-300 ease-out flex flex-col h-full
+                                    {{ $isStoreOpen ? 'hover:shadow-xl hover:-translate-y-1.5' : 'grayscale opacity-60' }}">
                             
                             <div class="relative h-48 sm:h-56 bg-gray-100 overflow-hidden">
                                 @if($product->image)
                                     <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->title }}"
-                                         class="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105" />
+                                            class="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105" />
                                 @else
                                     <div class="w-full h-full flex items-center justify-center bg-gray-200">
-                                         <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                     </div>
                                 @endif
 
                                 <div class="absolute top-2.5 right-2.5">
+                                    {{-- Status Badge Produk --}}
                                     @if($totalStock == 0 && $product->is_preorder)
-                                        <span class="badge bg-orange-500 text-white">Pre Order</span>
+                                         <span class="badge bg-orange-500 text-white">Pre Order</span>
                                     @elseif($totalStock > 0)
-                                        <span class="badge bg-green-500 text-white flex items-center gap-1"><i class="fas fa-check text-xs"></i> Stok: {{ $totalStock }}</span>
+                                         <span class="badge bg-green-500 text-white flex items-center gap-1"><i class="fas fa-check text-xs"></i> Stok: {{ $totalStock }}</span>
                                     @else
-                                         <span class="badge bg-red-500 text-white flex items-center gap-1"><i class="fas fa-times text-xs"></i> Habis</span>
+                                          <span class="badge bg-red-500 text-white flex items-center gap-1"><i class="fas fa-times text-xs"></i> Habis</span>
                                     @endif
                                 </div>
 
-                                {{-- PERUBAHAN: Overlay Hover (Hanya Lihat Detail) --}}
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-end p-3 
-                                            opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 
+                                {{-- 💡 Overlay Hover: Ganti Teks/Visibilitas Jika Toko Tutup --}}
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-center p-3 
+                                            {{ $isStoreOpen ? 'opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0' : 'opacity-100' }} 
                                             transition-all duration-300 ease-out">
-                                     <span class="text-white text-xs font-semibold flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                                         Lihat Detail <i class="fas fa-arrow-right text-[10px] transform group-hover:translate-x-0.5 transition-transform duration-200"></i>
+                                     <span class="text-white text-sm font-semibold flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                                         {{ $isStoreOpen ? 'Lihat Detail' : 'Toko Tutup' }} 
+                                         @if($isStoreOpen)
+                                            <i class="fas fa-arrow-right text-[10px] transform group-hover:translate-x-0.5 transition-transform duration-200"></i>
+                                         @endif
                                      </span>
                                 </div>
                             </div>
@@ -129,8 +163,8 @@
                                         @forelse($product->sizes as $size)
                                             <span class="px-2 py-0.5 text-[10px] rounded font-semibold border
                                                 {{ $size->stock > 0 
-                                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                                   : 'bg-gray-100 text-gray-400 border-gray-200 line-through' }}">
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                                    : 'bg-gray-100 text-gray-400 border-gray-200 line-through' }}">
                                                 {{ $size->size }} 
                                                 <span class="opacity-70">({{ $size->stock }})</span>
                                             </span>
@@ -141,7 +175,12 @@
                                 </div>
                             </div>
                         </div>
-                    </a>
+                    {{-- 💡 END: KONTROL LINK BERDASARKAN STATUS TOKO --}}
+                    @if($isStoreOpen)
+                        </a>
+                    @else
+                        </div>
+                    @endif
                 @endforeach
             </div>
         </div>
@@ -165,15 +204,26 @@
                 @foreach($atributProducts as $product)
                      @php 
                          $totalStock = $product->sizes->isNotEmpty() 
-                                     ? $product->sizes->sum('stock') 
-                                     : ($product->stock ?? 0); 
+                                    ? $product->sizes->sum('stock') 
+                                    : ($product->stock ?? 0); 
                      @endphp
-                     <a href="{{ route('product.show', $product->id) }}" class="group product-card block">
-                        <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 transition-all duration-300 ease-out hover:shadow-xl hover:-translate-y-1.5 flex flex-col h-full">
+                     
+                    {{-- 💡 START: KONTROL LINK BERDASARKAN STATUS TOKO --}}
+                    @if($isStoreOpen)
+                        <a href="{{ route('product.show', $product->id) }}" class="group product-card block">
+                    @else
+                        <div class="group product-card block cursor-not-allowed">
+                    @endif
+                        
+                        {{-- 💡 KONTROL STYLE: Tambahkan grayscale dan opacity jika toko tutup --}}
+                        <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 
+                                    transition-all duration-300 ease-out flex flex-col h-full
+                                    {{ $isStoreOpen ? 'hover:shadow-xl hover:-translate-y-1.5' : 'grayscale opacity-60' }}">
+
                             <div class="relative h-48 sm:h-56 bg-gray-100 overflow-hidden">
                                 @if($product->image)
                                     <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->title }}"
-                                         class="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105" />
+                                            class="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105" />
                                 @else
                                     <div class="w-full h-full flex items-center justify-center bg-gray-200">
                                          <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -181,24 +231,26 @@
                                 @endif
 
                                 <div class="absolute top-2.5 right-2.5">
+                                    {{-- Status Badge Produk --}}
                                      @if($totalStock == 0 && $product->is_preorder)
-                                        <span class="badge bg-orange-500 text-white">Pre Order</span>
-                                    @elseif($totalStock > 0)
-                                        <span class="badge bg-green-500 text-white flex items-center gap-1"><i class="fas fa-check text-xs"></i> Stok: {{ $totalStock }}</span>
-                                    @else
-                                         <span class="badge bg-red-500 text-white flex items-center gap-1"><i class="fas fa-times text-xs"></i> Habis</span>
-                                    @endif
+                                         <span class="badge bg-orange-500 text-white">Pre Order</span>
+                                     @elseif($totalStock > 0)
+                                         <span class="badge bg-green-500 text-white flex items-center gap-1"><i class="fas fa-check text-xs"></i> Stok: {{ $totalStock }}</span>
+                                     @else
+                                          <span class="badge bg-red-500 text-white flex items-center gap-1"><i class="fas fa-times text-xs"></i> Habis</span>
+                                     @endif
                                 </div>
                                 
-                                {{-- PERUBAHAN: Overlay Hover (Hanya Lihat Detail) --}}
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-end p-3 
-                                            opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 
+                                {{-- 💡 Overlay Hover: Ganti Teks/Visibilitas Jika Toko Tutup --}}
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end justify-center p-3 
+                                            {{ $isStoreOpen ? 'opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0' : 'opacity-100' }} 
                                             transition-all duration-300 ease-out">
-                                     <span class="text-white text-xs font-semibold flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                                         Lihat Detail <i class="fas fa-arrow-right text-[10px] transform group-hover:translate-x-0.5 transition-transform duration-200"></i>
+                                     <span class="text-white text-sm font-semibold flex items-center gap-1">
+                                          {{ $isStoreOpen ? 'Lihat Detail' : 'Toko Tutup' }} 
                                      </span>
                                 </div>
                             </div>
+                            
                             <div class="p-4 flex flex-col flex-grow">
                                 <h2 class="text-sm font-semibold text-gray-800 mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
                                     {{ $product->title }}
@@ -213,23 +265,28 @@
                                 </p>
                                 <div class="mt-auto pt-2 border-t border-gray-100">
                                      <p class="text-[11px] font-medium text-gray-500 mb-1.5">Ukuran:</p>
-                                    <div class="flex flex-wrap gap-1.5">
-                                        @if($product->sizes->isNotEmpty())
+                                     <div class="flex flex-wrap gap-1.5">
+                                         @if($product->sizes->isNotEmpty())
                                              @foreach($product->sizes as $size)
-                                                <span class="px-2 py-0.5 text-[10px] rounded font-semibold border
-                                                    {{ $size->stock > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-400 border-gray-200 line-through' }}">
-                                                    {{ $size->size }} 
-                                                    <span class="opacity-70">({{ $size->stock }})</span>
-                                                </span>
-                                            @endforeach
-                                        @else
-                                            <span class="text-gray-400 text-xs italic">N/A</span>
-                                        @endif
-                                    </div>
+                                                  <span class="px-2 py-0.5 text-[10px] rounded font-semibold border
+                                                      {{ $size->stock > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-400 border-gray-200 line-through' }}">
+                                                       {{ $size->size }} 
+                                                       <span class="opacity-70">({{ $size->stock }})</span>
+                                                  </span>
+                                             @endforeach
+                                         @else
+                                             <span class="text-gray-400 text-xs italic">N/A</span>
+                                         @endif
+                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </a>
+                    {{-- 💡 END: KONTROL LINK BERDASARKAN STATUS TOKO --}}
+                    @if($isStoreOpen)
+                        </a>
+                    @else
+                        </div>
+                    @endif
                 @endforeach
             </div>
         </div>
@@ -333,6 +390,11 @@ document.addEventListener('DOMContentLoaded', () => {
 /* Animasi Blob */
 @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .animate-spin-slow { animation: spin-slow 25s linear infinite; }
+/* 💡 Tambahkan efek Grayscale untuk toko tutup */
+.grayscale { 
+    filter: grayscale(100%); 
+    -webkit-filter: grayscale(100%);
+}
 
 </style>
 @endsection

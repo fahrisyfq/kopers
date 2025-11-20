@@ -40,6 +40,7 @@
                 <span class="tooltip">Bantuan & Saran?</span>
             </a>
 
+            {{-- Ikon Keranjang --}}
             @auth
                 @if(empty(Auth::user()->nis) || empty(Auth::user()->kelas) || empty(Auth::user()->jurusan))
                     <button type="button" class="relative cursor-not-allowed opacity-50" title="Lengkapi profil terlebih dahulu untuk melihat pesanan!">
@@ -60,6 +61,7 @@
                 </button>
             @endauth
 
+            {{-- Ikon "Pesanan Saya" (di header utama) --}}
             @auth
                 @if(empty(Auth::user()->nis) || empty(Auth::user()->kelas) || empty(Auth::user()->jurusan))
                     <button type="button" class="relative cursor-not-allowed opacity-50" title="Lengkapi profil terlebih dahulu untuk melihat pesanan!">
@@ -75,6 +77,7 @@
                     <i class="fas fa-box text-lg text-gray-400"></i>
                 </button>
             @endauth
+
 
             @auth
                 @if(empty(Auth::user()->nis) || empty(Auth::user()->kelas) || empty(Auth::user()->jurusan))
@@ -103,19 +106,32 @@
                             <div class="w-7 h-7 rounded-full bg-blue-200 flex items-center justify-center">
                                 <i class="fas fa-user text-blue-600 text-xs"></i>
                             </div>
-                            <span>{{ Str::limit(Auth::user()->name, 10) }}</span>
+                            <span>{{ Str::limit(!empty(Auth::user()->nama_lengkap) ? Auth::user()->nama_lengkap : Str::before(Auth::user()->email, '@'), 10) }}</span>
                             <i class="fas fa-chevron-down text-xs ml-1"></i>
                         </button>
-                        <div class="profile-dropdown-content absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 hidden">
-                            <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 text-sm">
-                                <i class="fas fa-user-cog w-4"></i> Kelola Profil
-                            </a>
-                            <form action="{{ route('logout') }}" method="POST">
-                                @csrf
-                                <button type="submit" class="flex items-center gap-2 w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 text-sm">
-                                    <i class="fas fa-sign-out-alt w-4"></i> Logout
-                                </button>
-                            </form>
+                        
+                        {{-- Dropdown profil --}}
+                        <div class="profile-dropdown-content absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-10 hidden overflow-hidden">
+                            {{-- Header Dropdown --}}
+                            <div class="px-4 py-3 border-b border-gray-100">
+                                <p class="text-sm font-semibold text-gray-900">{{ !empty(Auth::user()->nama_lengkap) ? Auth::user()->nama_lengkap : Str::before(Auth::user()->email, '@') }}</p>
+                                <p class="text-xs text-gray-500 truncate">{{ Auth::user()->email }}</p>
+                            </div>
+                            {{-- Link Navigasi --}}
+                            <div class="py-1">
+                                <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 text-sm">
+                                    <i class="fas fa-user-cog w-4"></i> Kelola Profil
+                                </a>
+                            </div>
+                            {{-- Bagian Logout (tetap ada) --}}
+                            <div class="py-1 border-t border-gray-100">
+                                <form action="{{ route('logout') }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="flex items-center gap-2 w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 text-sm">
+                                        <i class="fas fa-sign-out-alt w-4"></i> Logout
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -135,25 +151,60 @@
 
     </div>
 
+    {{-- Top-bar Biru --}}
     <div class="w-full bg-blue-50 border-t border-blue-100 text-sm">
-        <div class="container mx-auto px-4 py-2 flex flex-col sm:flex-row justify-between items-center flex-wrap gap-2">
-            <div class="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs text-gray-600">
-                <p class="flex items-center">
-                    <i class="fas fa-clock mr-1 text-yellow-500"></i>
-                    <span>Senin–Jumat 07.00–15.00</span>
-                </p>
-                <p class="flex items-center">
-                    <i class="fas fa-calendar-times mr-1 text-red-400"></i>
-                    <span>Libur nasional tutup</span>
-                </p>
-            </div>
-            <button @click="openPanduan = true" class="hidden sm:flex items-center gap-1.5 text-blue-600 font-medium hover:text-blue-700 text-xs sm:text-sm transition-colors">
-                <i class="fas fa-circle-info text-blue-500"></i>
-                <span class="underline underline-offset-4 decoration-2">Panduan</span>
-            </button>
+        <div class="container mx-auto px-4 py-2 flex flex-row justify-between items-center flex-nowrap gap-3 min-w-0">
+
+            @auth
+                {{-- TAMPILAN JIKA USER SUDAH LOGIN (DENGAN MARQUEE) --}}
+                <div class="flex items-center gap-2 text-xs text-gray-700 min-w-0 overflow-hidden">
+                    <i class="fas fa-user-check text-green-500 fa-fw flex-shrink-0"></i>
+                    
+                    @php
+                        // Logika nama: Ambil nama_lengkap, jika tidak ada, ambil username dari email
+                        $welcomeName = !empty(Auth::user()->nama_lengkap) ? Auth::user()->nama_lengkap : Str::before(Auth::user()->email, '@');
+                    @endphp
+
+                    <div class="marquee-container" title="Selamat datang, {{ $welcomeName }}">
+                        <div class="marquee-text-wrapper">
+                            <span class="whitespace-nowrap">Selamat datang, <strong class="font-semibold">{{ $welcomeName }}</strong></span>
+                            <span class="whitespace-nowrap ml-12">Selamat datang, <strong class="font-semibold">{{ $welcomeName }}</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 flex-shrink-0">
+                    <button @click="openPanduan = true" class="flex items-center gap-1.5 text-blue-600 font-medium hover:text-blue-700 text-xs sm:text-sm transition-colors">
+                        <i class="fas fa-circle-info text-blue-500"></i>
+                        <span class="underline underline-offset-4 decoration-2">Panduan</span>
+                    </button>
+                </div>
+
+            @elseguest
+                {{-- [PERBAIKAN] TAMPILAN GUEST (SEBELUM LOGIN) DIGANTI TAGLINE --}}
+                <div class="flex items-center gap-2 text-xs text-gray-700 min-w-0">
+                    <i class="fas fa-store text-blue-500 fa-fw"></i>
+                    <span class="font-medium truncate">Belanja Kebutuhan Sekolah, Praktis & Terpercaya</span>
+                </div>
+
+                {{-- Tombol Panduan (tetap ada) --}}
+                <button @click="openPanduan = true" class="flex-shrink-0 flex items-center gap-1.5 text-blue-600 font-medium hover:text-blue-700 text-xs sm:text-sm transition-colors">
+                    <i class="fas fa-circle-info text-blue-500"></i>
+                    <span class="underline underline-offset-4 decoration-2">Panduan</span>
+                </button>
+            @endguest
+            
         </div>
     </div>
 </header>
+
+{{-- 
+[CATATAN PENTING]
+Pastikan <main> atau <div> konten utama Anda memiliki padding-top
+agar tidak tertutup oleh header fixed.
+Contoh: <main class="pt-32"> ... </main> 
+(Nilai 'pt-32' mungkin perlu disesuaikan agar pas)
+--}}
 
 <div class="container mx-auto px-4 mt-3">
     <div class="flex items-center space-x-1 text-sm">
@@ -213,7 +264,7 @@
             <div class="bg-gradient-to-tr from-blue-100 to-blue-200 p-2.5 rounded-xl shadow-sm">
                 <i class="fas fa-university text-blue-600 text-xl logo-icon"></i>
             </div>
-            <span class="text-xl font-extrabold logo-glow tracking-tight">Koperasi</span>
+            <span class="text-xl font-extrabold logo-glow tracking-tight">Koperasi Sekolah</span>
         </a>
         <button @click="mobileMenuOpen = false" class="p-2 text-gray-400 hover:text-red-500">
             <i class="fas fa-times text-xl"></i>
@@ -278,11 +329,7 @@
                     <span>Masuk / Login</span>
                 </button>
             @endauth
-
-            <button @click.prevent="mobileMenuOpen = false; openPanduan = true" class="mobile-nav-link">
-                <i class="fas fa-circle-info fa-fw w-5"></i>
-                <span>Panduan</span>
-            </button>
+            
         </nav>
 
         <div class="p-4 border-t border-gray-100">
@@ -292,7 +339,7 @@
                         <i class="fas fa-user text-blue-600"></i>
                     </div>
                     <div>
-                        <span class="font-semibold text-gray-800 text-sm">{{ Auth::user()->name }}</span>
+                        <span class="font-semibold text-gray-800 text-sm">{{ !empty(Auth::user()->nama_lengkap) ? Auth::user()->nama_lengkap : Str::before(Auth::user()->email, '@') }}</span>
                         <p class="text-xs text-gray-500">{{ Auth::user()->email }}</p>
                     </div>
                 </div>
@@ -522,6 +569,44 @@
     }
     
     /* ====================================================== */
+    /* [PERBAIKAN] CSS MARQUEE (Teks Berjalan Seamless)        */
+    /* ====================================================== */
+    .marquee-container {
+        overflow: hidden;      /* The 'window' */
+        white-space: nowrap;  /* Prevent text from wrapping *inside* the container */
+        width: 100%;          /* Take up available space */
+    }
+
+    .marquee-text-wrapper {
+        display: inline-block;  /* Make it a block to animate */
+        white-space: nowrap;  /* Prevent its *children* from wrapping */
+        
+        /* [PERBAIKAN] "agak cepet" -> 15s (dari 20s). Sesuaikan jika perlu */
+        animation: marquee-seamless-loop 15s linear infinite;
+        will-change: transform; /* Hint untuk performa */
+    }
+    
+    .marquee-text-wrapper strong {
+        font-weight: 600; /* Memastikan font-semibold dari Tailwind tidak ter-override */
+    }
+
+    /* [PERBAIKAN] Berhenti saat di-hover */
+    .marquee-container:hover .marquee-text-wrapper {
+        animation-play-state: paused;
+    }
+
+    @keyframes marquee-seamless-loop {
+        from { transform: translateX(0); }
+        /* Ini menggeser wrapper ke kiri sebesar 50% dari lebarnya.
+        Karena wrapper berisi 2 kopi teks, 50% adalah lebar 1 kopi.
+        Saat animasi selesai, kopi ke-2 ada di posisi 0, dan animasi reset.
+        Ini menciptakan ilusi "ga ngulang dari awal".
+        */
+        to { transform: translateX(-50%); }
+    }
+
+
+    /* ====================================================== */
     /* CSS HAMBURGER BARU (SESUAI PERMINTAAN)                 */
     /* ====================================================== */
     .hamburger {
@@ -601,7 +686,6 @@
       cursor: pointer;
       box-shadow: 0px 8px 10px rgba(59, 130, 246, 0.2); 
       position: relative;
-      /* [BARU] Tambahkan z-index agar tooltip bisa muncul di atas konten lain */
       z-index: 10; 
     }
     
@@ -625,11 +709,9 @@
 
     .tooltip {
       position: absolute;
-      /* [FIX 1] Ubah 'top' ke '100%' agar di bawah tombol */
       top: 100%;
-      margin-top: 12px; /* Jarak dari tombol */
+      margin-top: 12px; 
       opacity: 0;
-      /* [FIX 2] Animasi diubah ke transform & opacity */
       transform: translateY(-10px);
       transition-property: opacity, transform;
       transition-duration: 0.3s;
@@ -658,17 +740,14 @@
       background-size: 1000%;
       background-position: center;
       transform: rotate(45deg);
-      /* [FIX 3] Panah dipindah dari 'bottom' ke 'top' */
       bottom: auto;
-      top: -5px; /* (10px / 2) = 5px. Ini menempatkannya di tengah atas. */
+      top: -5px; 
       transition-duration: 0.3s;
     }
 
     .faq-button:hover .tooltip {
-      /* [FIX 4] Atur opacity dan transform untuk memunculkan */
       opacity: 1;
-      transform: translateY(0); /* Bergerak ke posisi akhir */
-      /* Hapus 'top' dari sini karena sudah diatur di .tooltip */
+      transform: translateY(0); 
     }
 
 </style>

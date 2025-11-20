@@ -19,6 +19,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Andreia\FilamentNordTheme\FilamentNordThemePlugin;
+use Filament\Support\Assets\Css; // Kita tidak butuh ini lagi, tapi tidak apa-apa jika masih ada
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -30,11 +31,16 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->authGuard('admin')
             ->login()
-            ->brandName('Komart8') // 🟢 Ganti tulisan Laravel jadi Komart8
-            // ->brandLogo(asset('images/logo.jpg')) // (Opsional) logo jika kamu punya
+            ->brandName('Koperasi SMKN 8 Jakarta')
+            // ->brandLogo(asset('images/logo.jpg'))
             ->colors([
                 'primary' => Color::Amber,
             ])
+            
+            // [PERBAIKAN] Ganti '->assets()' dengan '->viteTheme()'
+            // Ini adalah cara yang benar untuk memuat CSS kustom
+            ->viteTheme('resources/css/filament-admin.css')
+
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([

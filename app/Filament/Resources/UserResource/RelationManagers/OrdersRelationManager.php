@@ -95,6 +95,7 @@ class OrdersRelationManager extends RelationManager
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Tanggal Pesan')
+                    ->timezone('Asia/Jakarta')
                     ->dateTime('d M Y H:i'),
             ])
             ->filters([])

@@ -6,14 +6,14 @@
 {{-- Padding atas untuk menghindari navbar --}}
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-blue-100 py-28 px-4 font-poppins">
 
-    {{-- PERUBAHAN: Menggunakan struktur card baru --}}
     <div class="card w-full max-w-md"> 
-        {{-- Konten form sekarang masuk ke dalam .card__content --}}
+        <div class="card__border"></div> 
+        
         <div class="card__content overflow-hidden"> 
             {{-- Header --}}
             <div class="bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-center py-5 px-6"> 
                 <h1 class="text-xl font-semibold flex items-center justify-center gap-2"> 
-                    <i class="fas fa-user-cog text-yellow-300"></i> {{-- Icon disesuaikan --}}
+                    <i class="fas fa-user-cog text-yellow-300"></i>
                     Edit Profil Siswa
                 </h1>
                 <p class="text-blue-100 text-xs mt-1 opacity-90">Perbarui data diri Anda.</p> 
@@ -37,7 +37,6 @@
                         <label class="form-label">Nama Lengkap</label>
                         <div class="relative">
                             <span class="input-icon left-3 text-gray-400"><i class="fas fa-user"></i></span>
-                            {{-- Input readonly diberi style berbeda --}}
                             <input type="text" class="input-field pl-10 bg-gray-100 text-gray-500 cursor-not-allowed" 
                                    value="{{ $user->nama_lengkap }}" readonly>
                         </div>
@@ -59,7 +58,7 @@
                         <div class="relative">
                             <span class="input-icon left-3"><i class="fas fa-hashtag"></i></span>
                             <input type="text" name="nis" id="nis" class="input-field pl-10 @error('nis') input-error @enderror"
-                                value="{{ old('nis', $user->nis ?? '') }}" placeholder="Contoh: 12345"> 
+                                value="{{ old('nis', $user->nis ?? '') }}" placeholder="Contoh: 12345" maxlength="10"> 
                         </div>
                         @if(empty($user->nis))
                             <p class="text-xs text-gray-500 mt-1">⚠️ Kosongkan jika belum punya</p>
@@ -108,10 +107,14 @@
                         <label class="form-label">No. Telepon Siswa (WA)</label> 
                         <div class="relative flex items-center">
                             <span class="prefix">+62</span>
-                             <span class="input-icon" style="left: calc(3.4rem + 8px);"><i class="fas fa-mobile-alt"></i></span> 
+                             {{-- [FIX] Style kalkulasi ikon diperbaiki --}}
+                             <span class="input-icon" style="left: 3.7rem;"><i class="fas fa-mobile-alt"></i></span> 
+                            {{-- [FIX] ltrim diperbaiki, maxlength ditambah --}}
                             <input type="text" name="no_telp_siswa" id="no_telp_siswa" class="input-field rounded-l-none pl-11 @error('no_telp_siswa') input-error @enderror" 
-                                   value="{{ old('no_telp_siswa', ltrim($user->no_telp_siswa, '+62')) }}" placeholder="812xxxxxxx" required inputmode="tel">
+                                   value="{{ old('no_telp_siswa', ltrim($user->no_telp_siswa, '62')) }}" placeholder="812xxxxxxx" required inputmode="tel" maxlength="12">
                         </div>
+                        {{-- [BARU] Helper text untuk validasi '0' --}}
+                        <p id="no_telp_siswa_helper" class="error-message" style="display: none;"><i class="fas fa-exclamation-circle mr-1"></i> Jangan awali dengan 0. Langsung masukkan angka 8.</p>
                         @error('no_telp_siswa') <p class="error-message"><i class="fas fa-exclamation-circle mr-1"></i> {{ $message }}</p> @enderror
                     </div>
 
@@ -120,11 +123,24 @@
                         <label class="form-label">No. Telepon Orang Tua</label> 
                          <div class="relative flex items-center">
                             <span class="prefix">+62</span>
-                            <span class="input-icon" style="left: calc(3.4rem + 8px);"><i class="fas fa-phone-alt"></i></span>
+                            {{-- [FIX] Style kalkulasi ikon diperbaiki --}}
+                            <span class="input-icon" style="left: 3.7rem;"><i class="fas fa-phone-alt"></i></span>
+                            {{-- [FIX] ltrim diperbaiki, maxlength ditambah --}}
                             <input type="text" name="no_telp_ortu" id="no_telp_ortu" class="input-field rounded-l-none pl-11 @error('no_telp_ortu') input-error @enderror"
-                                   value="{{ old('no_telp_ortu', ltrim($user->no_telp_ortu, '+62')) }}" placeholder="812xxxxxxx" required inputmode="tel">
+                                   value="{{ old('no_telp_ortu', ltrim($user->no_telp_ortu, '62')) }}" placeholder="812xxxxxxx" required inputmode="tel" maxlength="12">
                         </div>
+                        {{-- [BARU] Helper text untuk validasi '0' --}}
+                        <p id="no_telp_ortu_helper" class="error-message" style="display: none;"><i class="fas fa-exclamation-circle mr-1"></i> Jangan awali dengan 0. Langsung masukkan angka 8.</p>
                         @error('no_telp_ortu') <p class="error-message"><i class="fas fa-exclamation-circle mr-1"></i> {{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- [BARU] Catatan Penting --}}
+                    <div class="!mt-6 p-3.5 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-xs space-y-2">
+                        <p class="font-bold flex items-center gap-1.5"><i class="fas fa-exclamation-triangle"></i> Catatan Penting:</p>
+                        <ul class="list-disc list-inside pl-1 space-y-1">
+                            <li>Data Nama Lengkap dan NISN tidak dapat diubah dari halaman ini.</li>
+                            <li>Pastikan data Anda yang lain (NIS, Kelas, Jurusan, No. HP) sudah benar sebelum disimpan.</li>
+                        </ul>
                     </div>
 
                     {{-- Tombol Simpan (Dengan Validasi JS) --}}
@@ -146,9 +162,8 @@
 
 /* === Card Styling Baru (Adaptasi Light Theme) === */
 .card {
-    /* Warna disesuaikan dengan tema terang */
-    --glow-primary: hsla(197, 71%, 73%, 0.8); /* Cyan */
-    --glow-secondary: hsla(158, 64%, 73%, 0.8); /* Emerald */
+    --primary-glow: hsla(197, 71%, 73%, 0.8); /* Cyan */
+    --secondary-glow: hsla(158, 64%, 73%, 0.8); /* Emerald */
     --card-bg: rgba(255, 255, 255, 0.85); /* Background Card */
     --card-shadow: rgba(59, 130, 246, 0.1); /* Shadow biru halus */
     --border-line: rgba(200, 210, 225, 0.5); /* Warna border halus */
@@ -168,11 +183,10 @@
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-radius: 1.15rem; /* Sedikit lebih kecil */
-    /* Border halus di dalam */
     border: 1px solid var(--border-line); 
 }
 
-/* Pseudo-element untuk border berputar (menggantikan .card__border) */
+/* Pseudo-element untuk border berputar */
 .card::before {
     content: "";
     pointer-events: none;
@@ -187,19 +201,18 @@
     background-image: conic-gradient(
         from var(--angle), 
         var(--glow-secondary), 
-        var(--glow-primary), 
-        var(--glow-secondary)
+        var(--primary-glow), 
+        var(--secondary-glow)
     );
     filter: blur(15px); /* Glow yang lebih intens */
     opacity: 0.6; /* Visibilitas glow */
     animation: rotate 8s linear infinite; /* Animasi putar */
 }
 
-/* Animasi Rotasi (Sama) */
 @keyframes rotate { to { --angle: 360deg; } }
 @property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
 
-/* === Form Styling (Dipertahankan & Disesuaikan) === */
+/* === Form Styling (Disesuaikan) === */
 .form-label {
     display: block;
     font-size: 0.8rem; 
@@ -211,7 +224,7 @@
     width: 100%;
     border: 1px solid #d1d5db; 
     padding: 0.6rem 0.75rem; 
-    border-radius: 0.5rem; /* Radius disesuaikan */
+    border-radius: 0.5rem;
     outline: none;
     font-size: 0.85rem; 
     color: #1f2937; 
@@ -226,15 +239,14 @@
     background-color: #fff;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); 
 }
-/* Style untuk input readonly */
 .input-field[readonly] {
-    background-color: #e5e7eb; /* gray-200 */
-    color: #6b7280; /* gray-500 */
+    background-color: #e5e7eb; 
+    color: #6b7280; 
     cursor: not-allowed;
     box-shadow: none;
     border-color: #d1d5db;
 }
-.input-field[readonly]:focus { /* Hapus efek focus pada readonly */
+.input-field[readonly]:focus {
     border-color: #d1d5db;
     box-shadow: none;
 }
@@ -250,9 +262,10 @@
     z-index: 5; 
 }
 .input-icon.left-3 { left: 0.7rem; } 
-/* Kalkulasi disesuaikan agar pas */
-/* Lebar prefix (~3.2rem) + jarak (8px) */
-/* `left: calc(3.2rem + 8px);` atau `left: 3.7rem;` */
+/* [FIX] Kalkulasi CSS diperbaiki agar lebih pas */
+.prefix + .input-icon {
+    left: 3.7rem; 
+}
 
 .prefix {
     padding: 0.6rem 0.7rem; 
@@ -263,7 +276,7 @@
     font-size: 0.85rem; 
     border-radius: 0.5rem 0 0 0.5rem; 
     flex-shrink: 0; 
-    height: calc(1.7rem + 1.2rem + 2px); /* Disesuaikan dengan input */
+    height: calc(1.7rem + 1.2rem + 2px); 
     display: inline-flex; 
     align-items: center; 
 }
@@ -302,15 +315,15 @@
     background-size: 200% auto; 
     transition: all 0.4s ease-out; 
 }
-/* Style saat tombol aktif (tidak disabled) */
 .submit-button:not(:disabled):hover {
     background-position: right center; 
     box-shadow: 0 4px 15px 0 rgba(45, 212, 191, 0.3); 
     transform: scale(1.03); 
 }
-/* Style khusus saat tombol disabled */
 .submit-button:disabled {
-    background-image: linear-gradient(to right, #9ca3af, #6b7280, #9ca3af); /* Gradien abu-abu */
+    /* [FIX] Style disabled disesuaikan agar lebih jelas */
+    background-image: none;
+    background-color: #9ca3af; /* Abu-abu */
     opacity: 0.6;
     cursor: not-allowed;
     box-shadow: none;
@@ -319,13 +332,49 @@
 
 </style>
 
-{{-- Script Validasi Otomatis (Disesuaikan untuk button style baru) --}}
+{{-- ================================================== --}}
+{{-- [BARU] Script gabungan untuk validasi '0' DAN tombol disabled --}}
+{{-- ================================================== --}}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    
+    // --- Bagian 1: Validasi Input Real-time ---
+
+    function handlePhoneInput(inputId, helperId) {
+        const input = document.getElementById(inputId);
+        const helper = document.getElementById(helperId);
+        if (!input) return;
+
+        input.addEventListener('input', function(e) {
+            let value = e.target.value;
+            let numericValue = value.replace(/\D/g, ''); // Hapus non-digit
+
+            if (numericValue.startsWith('0')) {
+                numericValue = numericValue.substring(1); // Hapus 0 di depan
+                helper.style.display = 'flex';
+            } else {
+                helper.style.display = 'none';
+            }
+            e.target.value = numericValue;
+        });
+    }
+
+    handlePhoneInput('no_telp_siswa', 'no_telp_siswa_helper');
+    handlePhoneInput('no_telp_ortu', 'no_telp_ortu_helper');
+
+    const nisInput = document.getElementById('nis');
+    if (nisInput) {
+        nisInput.addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/[^0-9-]/g, ''); // Hanya angka dan strip
+        });
+    }
+
+    // --- Bagian 2: Logika Tombol Disabled ---
+
     const form = document.getElementById('editProfileForm');
     const saveBtn = document.getElementById('saveBtn');
     
-    // Ambil semua field yang bisa diedit dan required (atau punya aturan validasi)
+    // Hanya field yang bisa diedit
     const editableFields = form.querySelectorAll('input:not([readonly]), select'); 
 
     // Simpan nilai awal form
@@ -336,46 +385,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function checkChangesAndValidity() {
         let hasChanged = false;
-        let allValid = true; 
+        // Gunakan checkValidity() bawaan HTML5 untuk cek 'required', 'pattern', dll.
+        let allValid = form.checkValidity(); 
 
         editableFields.forEach(field => {
             // Cek perubahan
             if (field.value !== initialValues[field.name]) {
                 hasChanged = true;
             }
-            // Cek validitas (contoh: required) - bisa ditambah cek pattern, dll.
-            if (field.required && field.value.trim() === '') {
-                allValid = false;
-            }
-            // Tambahkan validasi lain jika perlu (misal nomor telepon)
-            if (field.name === 'no_telp_siswa' || field.name === 'no_telp_ortu') {
-                // Contoh validasi sederhana: harus angka dan minimal 9 digit
-                if (!/^\d{9,}$/.test(field.value.trim()) && field.value.trim() !== '') { 
-                   // Izinkan kosong jika tidak required, tapi jika diisi harus valid
-                   // (Anda mungkin perlu membuat nomor telepon optional di backend juga)
-                   // Jika required, hapus '&& field.value.trim() !== ""'
-                   // allValid = false; 
-                }
-            }
-             if (field.name === 'nis') {
-                // Contoh validasi sederhana: harus angka atau kosong
-                if (!/^\d*$/.test(field.value.trim())) { 
-                   allValid = false; 
-                }
-            }
-
         });
 
         // Aktifkan tombol HANYA jika ada perubahan DAN semua field valid
         if (hasChanged && allValid) {
             saveBtn.disabled = false;
             saveBtn.classList.remove('opacity-60', 'cursor-not-allowed');
-            // Hapus style hover dari class disabled, tambahkan ke class aktif
-            saveBtn.classList.add('hover:scale-[1.03]', 'hover:shadow-cyan-500/30'); 
         } else {
             saveBtn.disabled = true;
             saveBtn.classList.add('opacity-60', 'cursor-not-allowed');
-            saveBtn.classList.remove('hover:scale-[1.03]', 'hover:shadow-cyan-500/30');
         }
     }
 
@@ -384,8 +410,9 @@ document.addEventListener('DOMContentLoaded', () => {
         field.addEventListener('input', checkChangesAndValidity);
         field.addEventListener('change', checkChangesAndValidity); // Untuk select
     });
-
+    
     // Panggil check awal saat halaman load (tombol harus disabled awalnya)
+    // Kita panggil di sini agar 'allValid' bisa langsung cek form
     checkChangesAndValidity(); 
 });
 </script>

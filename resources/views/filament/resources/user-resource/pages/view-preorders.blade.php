@@ -150,6 +150,16 @@
                                         
                                         {{-- Info Produk (Kiri) --}}
                                         <div class="flex-1 min-w-0">
+
+                                            {{-- 🕒 Tambahan: Waktu Pesanan --}}
+                                            <div class="text-xs text-gray-500 mb-1">
+                                                <x-heroicon-o-clipboard-document-list class="w-4 h-4 inline -mt-0.5 mr-1 text-gray-400" />
+                                                Tanggal Pesanan:
+                                                <span class="font-medium text-gray-700">
+                                                    {{ \Carbon\Carbon::parse($order->created_at)->translatedFormat('d M Y, H:i') }} WIB
+                                                </span>
+                                            </div>
+
                                             <div class="font-semibold text-gray-900 truncate">
                                                 {{ $item->product->title ?? '-' }}
                                             </div>

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;      // [TAMBAHAN] Pastikan ini ada
+use Illuminate\Support\Facades\Storage;  // [TAMBAHAN] Pastikan ini ada
 
 class CartController extends Controller
 {
@@ -19,27 +21,27 @@ class CartController extends Controller
 
     /** Tambah produk ke keranjang (form biasa) */
     public function add(Request $request, $id)
-{
-    $user = auth()->user();
+    {
+        $user = auth()->user();
 
-    // ✅ Cek apakah profil sudah lengkap
-    if (
-        empty($user->nama_lengkap) ||
-        empty($user->nisn) ||
-        empty($user->kelas) ||
-        empty($user->jurusan) ||
-        empty($user->no_telp_siswa) ||
-        empty($user->no_telp_ortu)
-    ) {
-        return redirect()->route('profile.complete')
-            ->with('warning', 'Silakan lengkapi profil terlebih dahulu sebelum menambah produk ke keranjang.');
+        // ✅ Cek apakah profil sudah lengkap
+        if (
+            empty($user->nama_lengkap) ||
+            empty($user->nisn) ||
+            empty($user->kelas) ||
+            empty($user->jurusan) ||
+            empty($user->no_telp_siswa) ||
+            empty($user->no_telp_ortu)
+        ) {
+            return redirect()->route('profile.complete')
+                ->with('warning', 'Silakan lengkapi profil terlebih dahulu sebelum menambah produk ke keranjang.');
+        }
+
+        // ✅ Jika profil lengkap, lanjut tambah ke keranjang
+        return $this->addToCart($request, $id)
+            ? redirect()->route('cart.index')->with('success', 'Produk ditambahkan ke keranjang.')
+            : redirect()->back()->with('error', 'Gagal menambahkan produk. Stok habis dan tidak bisa pre-order.');
     }
-
-    // ✅ Jika profil lengkap, lanjut tambah ke keranjang
-    return $this->addToCart($request, $id)
-        ? redirect()->route('cart.index')->with('success', 'Produk ditambahkan ke keranjang.')
-        : redirect()->back()->with('error', 'Gagal menambahkan produk. Stok habis dan tidak bisa pre-order.');
-}
 
 
     /** Tambah produk via AJAX */
@@ -50,7 +52,7 @@ class CartController extends Controller
         }
 
         $user = auth()->user();
-       if (
+        if (
             empty($user->nama_lengkap) ||
             empty($user->nisn) ||
             empty($user->kelas) ||
@@ -78,23 +80,48 @@ class CartController extends Controller
     /** Update quantity */
     public function update(Request $request, $key)
     {
-        $cart = session('cart', []);
+        $cart = session()->get('cart');
+
         if (!isset($cart[$key])) {
-            return redirect()->back()->with('error', 'Produk tidak ditemukan di keranjang.');
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Item tidak ditemukan.'], 404);
+            }
+            return redirect()->route('cart.index')->with('error', 'Item tidak ditemukan.');
         }
 
-        $item = $cart[$key];
-        $newQty = max(1, (int) $request->input('quantity', 1));
-        $stock = (int) ($item['stock'] ?? 0);
+        $quantity = (int) $request->input('quantity', 1);
+        $stock = $cart[$key]['stock']; 
 
-        if ($newQty > $stock && !$item['is_preorder']) {
-            return redirect()->back()->with('error', '❌ Stok produk tidak mencukupi.');
+        if ($quantity < 1) {
+            $quantity = 1;
+        }
+        if ($quantity > $stock && !$cart[$key]['is_preorder']) { // [PERBAIKAN] Izinkan jika preorder
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Stok tidak mencukupi.'], 422);
+            }
+            return redirect()->route('cart.index')->with('error', 'Stok tidak mencukupi.');
         }
 
-        $cart[$key]['quantity'] = $newQty;
-        session(['cart' => $cart]);
+        $cart[$key]['quantity'] = $quantity;
+        session()->put('cart', $cart);
 
-        return redirect()->back()->with('success', 'Jumlah produk diperbarui.');
+        if ($request->wantsJson()) {
+            
+            $newSubtotal = collect($cart)->sum(fn($i) => $i['price'] * $i['quantity']);
+            $newTotal = $newSubtotal;
+            $newItemTotal = $cart[$key]['price'] * $quantity;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Kuantitas diperbarui!',
+                'itemTotalFormatted' => 'Rp ' . number_format($newItemTotal, 0, ',', '.'),
+                'subtotalFormatted' => 'Rp ' . number_format($newSubtotal, 0, ',', '.'),
+                'totalFormatted' => 'Rp ' . number_format($newTotal, 0, ',', '.'),
+                'itemCount' => count($cart)
+            ]);
+        }
+
+        return redirect()->route('cart.index')->with('success', 'Kuantitas diperbarui!');
     }
 
     /** Hapus item dari keranjang */
@@ -115,7 +142,7 @@ class CartController extends Controller
         return redirect()->route('cart.index')->with('success', 'Keranjang dikosongkan.');
     }
 
-    /** Update quantity via AJAX */
+    /** Update quantity via AJAX (Fungsi ini sepertinya duplikat, tapi kita biarkan) */
     public function ajaxUpdate(Request $request)
     {
         $key = $request->input('key');
@@ -152,70 +179,101 @@ class CartController extends Controller
     /** ========================
      * 💳 Checkout
      * ======================== */
-    public function checkoutIndex()
+
+    /**
+     * [PERBAIKAN UTAMA]
+     * Menampilkan halaman checkout HANYA dengan item yang dipilih
+     */
+    public function checkoutIndex(Request $request)
     {
+        // Ambil SEMUA item di keranjang
         $cart = session()->get('cart', []);
-        return view('checkout.index', compact('cart'));
+        
+        // Ambil array 'selected' dari URL (?selected[]=key1&selected[]=key2)
+        $selectedKeys = $request->input('selected', []);
+
+        if (empty($selectedKeys) || empty($cart)) {
+            // Jika tidak ada yang dipilih, kembalikan ke keranjang
+            return redirect()->route('cart.index')->with('error', 'Anda harus memilih minimal satu item untuk checkout.');
+        }
+
+        // Filter keranjang agar HANYA berisi item yang dicentang
+        $selectedItems = collect($cart)->filter(function($item, $key) use ($selectedKeys) {
+            // Pastikan key ada di daftar yang dipilih
+            return in_array($key, $selectedKeys);
+        })->all();
+
+        // Jika setelah filter ternyata kosong (misal session aneh)
+        if (empty($selectedItems)) {
+             return redirect()->route('cart.index')->with('error', 'Item yang dipilih tidak valid. Silakan coba lagi.');
+        }
+
+        // Kirim HANYA item yang terpilih ke view checkout
+        return view('checkout.index', [
+            'selectedItems' => $selectedItems // Ganti nama variabel
+        ]);
     }
 
+    /** Memproses pembayaran checkout */
     public function checkout(Request $request)
     {
         $selected = $request->input('selected', []);
-        $cart = session()->get('cart', []);
+        $cart = session()->get('cart', []); // Ambil cart utuh dari session
 
         if (empty($cart)) {
             return redirect()->route('cart.index')->with('error', 'Keranjang kosong!');
         }
 
         if (empty($selected)) {
-            return redirect()->route('checkout.index')->with('error', 'Pilih minimal 1 produk untuk checkout.');
+            // Ini seharusnya tidak terjadi jika validasi di checkoutIndex() benar
+            return redirect()->route('cart.index')->with('error', 'Pilih minimal 1 produk untuk checkout.');
         }
 
-        // 🟢 1. UBAH VALIDASI: Tambahkan metode baru & validasi file
+        // 🟢 1. Validasi: Tambahkan metode baru & validasi file
         $request->validate([
             'payment_method' => 'required|in:cash,kjp,transfer_bank,e_wallet',
             'proof_of_payment' => 'required_if:payment_method,transfer_bank,e_wallet|nullable|file|mimes:jpg,jpeg,png,pdf|max:2048', // Max 2MB
+        ], [
+            'proof_of_payment.required_if' => 'Bukti pembayaran wajib di-upload untuk metode ini.'
         ]);
 
         $paymentMethod = $request->input('payment_method');
-        $proofPath = null; // Inisialisasi path file
+        $proofPath = null;
 
-        // 🟢 2. TAMBAHKAN LOGIKA UPLOAD FILE
+        // 🟢 2. Logika Upload File
         if ($request->hasFile('proof_of_payment')) {
             try {
-                // Simpan file di 'storage/app/public/payment_proofs'
-                // Pastikan Anda sudah menjalankan `php artisan storage:link`
                 $proofPath = $request->file('proof_of_payment')->store('payment_proofs', 'public');
             } catch (\Throwable $e) {
                 Log::error('Gagal upload bukti pembayaran: ' . $e->getMessage());
-                return redirect()->route('checkout.index')->with('error', 'Gagal mengunggah bukti pembayaran.');
+                return redirect()->back()->with('error', 'Gagal mengunggah bukti pembayaran.');
             }
         }
 
         $total = 0;
-        foreach ($selected as $key) {
-            if (isset($cart[$key])) {
-                $total += ($cart[$key]['price'] ?? 0) * ($cart[$key]['quantity'] ?? 1);
-            }
+        // [PERBAIKAN] Filter cart berdasarkan $selected untuk menghitung total
+        $itemsToCheckout = collect($cart)->filter(function($item, $key) use ($selected) {
+            return in_array($key, $selected);
+        });
+
+        foreach ($itemsToCheckout as $key => $item) {
+             $total += ($item['price'] ?? 0) * ($item['quantity'] ?? 1);
         }
 
         try {
             \DB::beginTransaction();
 
-            // 🟢 3. UBAH ORDER::CREATE: Masukkan path bukti bayar
+            // 🟢 3. Simpan Order
             $order = Order::create([
                 'user_id' => auth()->id(),
                 'total_price' => $total,
                 'payment_method' => $paymentMethod,
-                'payment_status' => 'pending', // Tetap pending, menunggu verifikasi admin
-                'proof_of_payment' => $proofPath, // Simpan path file
+                'payment_status' => 'pending', 
+                'proof_of_payment' => $proofPath, 
             ]);
 
-            // ... (Logika foreach untuk order items tetap sama) ...
-            foreach ($selected as $key) {
-                if (!isset($cart[$key])) continue;
-
-                $item = $cart[$key];
+            // Loop HANYA pada item yang dipilih
+            foreach ($itemsToCheckout as $key => $item) {
                 $quantity = $item['quantity'] ?? 1;
                 $product = Product::lockForUpdate()->find($item['id']);
                 if (!$product) continue;
@@ -230,16 +288,15 @@ class CartController extends Controller
                         ->lockForUpdate()
                         ->first();
 
-                    if (!$productSize) continue;
+                    if (!$productSize) {
+                        throw new \Exception("Ukuran produk {$item['title']} tidak ditemukan.");
+                    }
                     $isPreorder = ($product->is_preorder && $productSize->stock <= 0);
 
                     if ($productSize->stock < $quantity && !$isPreorder) {
-                        \DB::rollBack();
-                        return redirect()->route('checkout.index')->with(
-                            'error',
-                            "Stok tidak cukup untuk {$item['title']} ukuran {$item['size']}."
-                        );
+                        throw new \Exception("Stok tidak cukup untuk {$item['title']} ukuran {$item['size']}.");
                     }
+                    
                     if ($isPreorder) {
                         $product->increment('preorder_quantity', $quantity);
                     } else {
@@ -252,12 +309,9 @@ class CartController extends Controller
                     $isPreorder = ($product->is_preorder && $product->stock <= 0);
 
                     if ($product->stock < $quantity && !$isPreorder) {
-                        \DB::rollBack();
-                        return redirect()->route('checkout.index')->with(
-                            'error',
-                            "Stok tidak cukup untuk {$item['title']}."
-                        );
+                         throw new \Exception("Stok tidak cukup untuk {$item['title']}.");
                     }
+                    
                     if ($isPreorder) {
                         $product->increment('preorder_quantity', $quantity);
                     } else {
@@ -276,22 +330,25 @@ class CartController extends Controller
                     'preorder_status' => $isPreorder ? 'waiting' : 'ready',
                 ]);
 
+                // Hapus item dari session cart
                 unset($cart[$key]);
             }
 
-            session()->put('cart', $cart);
+            session()->put('cart', $cart); // Simpan sisa keranjang
             \DB::commit();
 
         } catch (\Throwable $e) {
             \DB::rollBack();
 
-            // 🟢 4. TAMBAHKAN ROLLBACK FILE: Hapus file jika DB gagal
+            // 🟢 4. Hapus file jika DB gagal
             if ($proofPath && Storage::disk('public')->exists($proofPath)) {
                 Storage::disk('public')->delete($proofPath);
             }
 
             Log::error('Checkout gagal: ' . $e->getMessage());
-            return redirect()->route('checkout.index')->with('error', 'Terjadi kesalahan saat checkout.');
+            // [PERBAIKAN] Redirect kembali ke halaman checkout
+            return redirect()->route('checkout.index', ['selected' => $selected])
+                             ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
 
         return redirect()->route('orders.index')->with('success', 'Pesanan berhasil dibuat!');
@@ -302,7 +359,6 @@ class CartController extends Controller
      * ======================== */
     private function addToCart(Request $request, $id)
     {
-        // ... (Fungsi ini tidak perlu diubah, biarkan seperti aslinya) ...
         $product = Product::findOrFail($id);
         $size = $request->input('size');
         $cartKey = $id . ($size ? '-' . $size : '');
@@ -311,8 +367,11 @@ class CartController extends Controller
         $maxStock = $size
             ? optional($product->sizes()->where('size', $size)->first())->stock ?? 0
             : $product->stock;
+        
+        $isPreorder = $product->is_preorder;
 
-        if ($maxStock <= 0 && !$product->is_preorder) {
+        // Cek jika bisa preorder atau stok ada
+        if ($maxStock <= 0 && !$isPreorder) {
             return false;
         }
 
@@ -326,12 +385,14 @@ class CartController extends Controller
             'size' => $size,
             'image' => $product->image ?? null,
             'old_price' => $product->old_price ?? null,
-            'is_preorder' => $product->is_preorder,
+            'is_preorder' => $isPreorder,
         ];
 
-        if ($maxStock > 0) {
+        // Jika tidak preorder, batasi dengan stok
+        if (!$isPreorder && $maxStock > 0) {
             $cartItem['quantity'] = min(($cartItem['quantity'] ?? 0) + 1, $maxStock);
         } else {
+            // Jika preorder (atau stok ada), tambahkan saja
             $cartItem['quantity'] = ($cartItem['quantity'] ?? 0) + 1;
         }
 

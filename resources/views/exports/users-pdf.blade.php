@@ -241,6 +241,16 @@
                                         <td colspan="2" style="text-align: right;">Total Pesanan Siswa:</td>
                                         <td style="text-align: right;">Rp{{ number_format($totalPesananSiswa, 0, ',', '.') }}</td>
                                     </tr>
+                                    <tr>
+                                        @php
+                                            // Hitung jumlah item pre order (is_preorder aktif & stok <= 0)
+                                            $jumlahPreOrder = $allItems->filter(function($item) {
+                                                return $item->product && $item->product->is_preorder && $item->product->stock <= 0;
+                                            })->count();
+                                        @endphp
+                                        <td colspan="2" style="text-align: right;">Jumlah Produk Pre-Order:</td>
+                                        <td style="text-align: right;">{{ $jumlahPreOrder }}</td>
+                                    </tr>
                                 </tfoot>
                             </table>
                         </td>

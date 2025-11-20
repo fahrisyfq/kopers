@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ProductResource\Pages;
 use App\Filament\Resources\ProductResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use App\Livewire\Admin\StoreStatusToggle;
 
 class ListProducts extends ListRecords
 {
@@ -14,6 +15,20 @@ class ListProducts extends ListRecords
     {
         return [
             Actions\CreateAction::make(),
+        ];
+    }
+
+    public function getHeader(): ?\Illuminate\Contracts\View\View
+    {
+        return view('filament.custom.list-products-header', [
+            'storeStatusToggle' => StoreStatusToggle::class,
+        ]);
+    }
+
+    protected function getListeners(): array
+    {
+        return [
+            'refreshFilamentTable' => '$refresh',
         ];
     }
 }

@@ -138,6 +138,13 @@ class UserResource extends Resource
                     ]),
             ])
             ->headerActions([
+                // 💡 TOMBOL BARU DITAMBAHKAN DI SINI
+                Action::make('lihatProdukPesanan')
+                    ->label('Produk-Pesanan')
+                    ->icon('heroicon-o-shopping-bag')
+                    ->color('warning') 
+                    ->url(fn() => Pages\ViewProductOrders::getUrl()), // Arahkan ke Halaman baru
+
                 // 🔹 Tombol baru: Lihat Pre Order
                 Action::make('lihatPreOrder')
                     ->label('Lihat Pre Order')
@@ -151,125 +158,123 @@ class UserResource extends Resource
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
                     ->action(function ($livewire) {
-                        $query = $livewire->getFilteredTableQuery();
-                        $filteredUsers = $query->with(['orders.items.product', 'orders.items.size'])->get();
+    $query = $livewire->getFilteredTableQuery();
+    $filteredUsers = $query->with(['orders.items.product', 'orders.items.size'])->get();
 
-                        // Ambil filter aktif (dari tabel Filament)
-                        $filters = $livewire->tableFilters ?? [];
+    $filters = $livewire->tableFilters ?? [];
+    $fileName = 'Data_Siswa';
 
-                        // Default nama file
-                        $fileName = 'Data_Siswa';
+    if (!empty($filters['kelas']['value'])) {
+        $fileName .= '_' . $filters['kelas']['value'];
+    }
+    if (!empty($filters['jurusan']['value'])) {
+        $fileName .= '_' . str_replace(' ', '', $filters['jurusan']['value']);
+    }
+    $fileName = preg_replace('/[^A-Za-z0-9_]/', '', $fileName) . '.xlsx';
 
-                        // Kalau filter kelas terisi
-                        if (!empty($filters['kelas']['value'])) {
-                            $fileName .= '_' . $filters['kelas']['value'];
-                        }
+    $data = collect();
 
-                        // Kalau filter jurusan terisi
-                        if (!empty($filters['jurusan']['value'])) {
-                            $fileName .= '_' . str_replace(' ', '', $filters['jurusan']['value']);
-                        }
+    foreach ($filteredUsers as $user) {
+        $produkList = collect();
 
-                        // Bersihkan nama file dari karakter aneh
-                        $fileName = preg_replace('/[^A-Za-z0-9_]/', '', $fileName) . '.xlsx';
+        foreach ($user->orders ?? [] as $order) {
+            foreach ($order->items ?? [] as $item) {
+                $isPreOrder = $item->is_preorder;
+                $statusLabel = $item->status_label ?? 'Ready Stock';
 
-                        $data = collect();
-                        foreach ($filteredUsers as $user) {
-                            $produkList = collect();
-                            foreach ($user->orders as $order) {
-                                foreach ($order->items as $item) {
-                                    $produkList->push(
-                                        "• " . ($item->product?->title ?? '-') .
-                                        " (" . ($item->size?->size ?? '-') . ")\n   ↳ Status: " .
-                                        ucfirst($order->payment_status ?? '-')
-                                    );
-                                }
-                            }
+                $produkList->push(
+                    "• " . ($item->product?->title ?? '-') .
+                    " (" . ($item->size?->size ?? '-') . ")" .
+                    " — " . $statusLabel .
+                    "\n   ↳ Status: " . ucfirst($order->payment_status ?? '-')
+                );
 
-                            $data->push([
-                                'NISN' => $user->nisn,
-                                'NIS' => $user->nis,
-                                'Nama Lengkap' => $user->nama_lengkap,
-                                'Kelas' => $user->kelas,
-                                'Jurusan' => $user->jurusan,
-                                'Produk yang Dipesan' => $produkList->implode("\n\n"),
-                            ]);
-                        }
+            }
+        }
 
-                        // Export Excel dengan nama file dinamis
-                        return Excel::download(
-                            new class($data) implements 
-                                \Maatwebsite\Excel\Concerns\FromCollection,
-                                \Maatwebsite\Excel\Concerns\WithHeadings,
-                                \Maatwebsite\Excel\Concerns\WithStyles,
-                                \Maatwebsite\Excel\Concerns\WithColumnWidths,
-                                \Maatwebsite\Excel\Concerns\WithDefaultStyles
-                            {
-                                public function __construct(public $data) {}
-                                public function collection() { return $this->data; }
-                                public function headings(): array {
-                                    return ['NISN', 'NIS', 'Nama Lengkap', 'Kelas', 'Jurusan', 'Produk yang Dipesan'];
-                                }
 
-                                public function columnWidths(): array {
-                                    return [
-                                        'A' => 12,
-                                        'B' => 10,
-                                        'C' => 25,
-                                        'D' => 10,
-                                        'E' => 15,
-                                        'F' => 60,
-                                    ];
-                                }
+        $data->push([
+            'NISN' => $user->nisn,
+            'NIS' => $user->nis,
+            'Nama Lengkap' => $user->nama_lengkap,
+            'Kelas' => $user->kelas,
+            'Jurusan' => $user->jurusan,
+            'Produk yang Dipesan' => $produkList->implode("\n\n"),
+        ]);
+    }
 
-                                public function defaultStyles(\PhpOffice\PhpSpreadsheet\Style\Style $defaultStyle) {
-                                    $defaultStyle->getFont()->setName('Calibri')->setSize(11);
-                                }
+    return Excel::download(
+        new class($data) implements 
+            \Maatwebsite\Excel\Concerns\FromCollection,
+            \Maatwebsite\Excel\Concerns\WithHeadings,
+            \Maatwebsite\Excel\Concerns\WithStyles,
+            \Maatwebsite\Excel\Concerns\WithColumnWidths,
+            \Maatwebsite\Excel\Concerns\WithDefaultStyles
+        {
+            public function __construct(public $data) {}
+            public function collection() { return $this->data; }
+            public function headings(): array {
+                return ['NISN', 'NIS', 'Nama Lengkap', 'Kelas', 'Jurusan', 'Produk yang Dipesan'];
+            }
+            public function columnWidths(): array {
+                return [
+                    'A' => 12,
+                    'B' => 10,
+                    'C' => 25,
+                    'D' => 10,
+                    'E' => 15,
+                    'F' => 80, // Lebarkan kolom produk
+                ];
+            }
+            public function defaultStyles(\PhpOffice\PhpSpreadsheet\Style\Style $defaultStyle) {
+                $defaultStyle->getFont()->setName('Calibri')->setSize(11);
+            }
+            public function styles(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet) {
+                $headerStyle = [
+                    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => '4F81BD']
+                    ],
+                    'alignment' => [
+                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000']
+                        ]
+                    ]
+                ];
 
-                                public function styles(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet) {
-                                    $headerStyle = [
-                                        'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-                                        'fill' => [
-                                            'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                                            'startColor' => ['rgb' => '4F81BD']
-                                        ],
-                                        'alignment' => [
-                                            'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                                            'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-                                        ],
-                                        'borders' => [
-                                            'allBorders' => [
-                                                'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                                                'color' => ['rgb' => '000000']
-                                            ]
-                                        ]
-                                    ];
+                $dataStyle = [
+                    'alignment' => [
+                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP,
+                        'wrapText' => true,
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000']
+                        ]
+                    ]
+                ];
 
-                                    $dataStyle = [
-                                        'alignment' => [
-                                            'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP,
-                                            'wrapText' => true,
-                                        ],
-                                        'borders' => [
-                                            'allBorders' => [
-                                                'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                                                'color' => ['rgb' => '000000']
-                                            ]
-                                        ]
-                                    ];
+                $lastRow = $sheet->getHighestRow();
+                $sheet->getStyle('A1:F1')->applyFromArray($headerStyle);
+                $sheet->getStyle("A2:F{$lastRow}")->applyFromArray($dataStyle);
 
-                                    $lastRow = $sheet->getHighestRow();
-                                    $sheet->getStyle('A1:F1')->applyFromArray($headerStyle);
-                                    $sheet->getStyle("A2:F{$lastRow}")->applyFromArray($dataStyle);
+                // Sesuaikan tinggi baris otomatis
+                for ($i = 1; $i <= $lastRow; $i++) {
+                    $sheet->getRowDimension($i)->setRowHeight(-1);
+                }
+            }
+        },
+        $fileName
+    );
+}),
 
-                                    for ($i = 1; $i <= $lastRow; $i++) {
-                                        $sheet->getRowDimension($i)->setRowHeight(-1);
-                                    }
-                                }
-                            },
-                            $fileName // 🔹 Nama file dinamis berdasarkan filter
-                        );
-                    }),
 
 
                 // 🔹 Export ke PDF
@@ -318,6 +323,8 @@ class UserResource extends Resource
     public static function getPages(): array
     {
         return [
+            // 💡 DAFTARKAN HALAMAN BARU ANDA DI SINI
+            'product-orders' => Pages\ViewProductOrders::route('/product-orders'),
             'preorders' => Pages\ViewPreOrders::route('/preorders'),
             'index' => Pages\ListUsers::route('/'),
             'create' => Pages\CreateUser::route('/create'),
