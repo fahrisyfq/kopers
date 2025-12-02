@@ -18,6 +18,7 @@ class Product extends Model
         'category',
         'is_preorder',
         'is_active', // 💡 Ditambahkan
+        'preorder_quantity', // 💡 Ditambahkan
     ];
 
     protected $casts = [
@@ -42,64 +43,64 @@ class Product extends Model
     }
 
     // === Update stok otomatis setiap kali disimpan ===
-    protected static function booted()
-{
-    // === Update total stok dari sizes untuk kategori yang punya ukuran ===
-    static::saved(function ($product) {
-        if ($product->sizes()->exists()) {
-            $totalStock = $product->sizes->sum('stock');
-            if ((int)$product->stock !== (int)$totalStock) {
-                $product->stock = $totalStock;
-                $product->saveQuietly();
-            }
-        }
-    });
+//     protected static function booted()
+// {
+//     // === Update total stok dari sizes untuk kategori yang punya ukuran ===
+//     static::saved(function ($product) {
+//         if ($product->sizes()->exists()) {
+//             $totalStock = $product->sizes->sum('stock');
+//             if ((int)$product->stock !== (int)$totalStock) {
+//                 $product->stock = $totalStock;
+//                 $product->saveQuietly();
+//             }
+//         }
+//     });
 
-    // === Sinkron pre-order untuk SEMUA kategori ===
-    static::saved(function ($product) {
-        // Jalankan hanya jika stok berubah (hindari infinite loop)
-        if ($product->wasChanged('stock')) {
+//     // === Sinkron pre-order untuk SEMUA kategori ===
+//     static::saved(function ($product) {
+//         // Jalankan hanya jika stok berubah (hindari infinite loop)
+//         if ($product->wasChanged('stock')) {
 
-            $preOrders = \App\Models\OrderItem::where('product_id', $product->id)
-                ->where('is_preorder', true)
-                ->where('preorder_status', 'waiting')
-                ->orderBy('created_at')
-                ->get();
+//             $preOrders = \App\Models\OrderItem::where('product_id', $product->id)
+//                 ->where('is_preorder', true)
+//                 ->where('preorder_status', 'waiting')
+//                 ->orderBy('created_at')
+//                 ->get();
 
-            if ($product->stock > 0 && $preOrders->count() > 0) {
-                $currentStock = $product->stock;
-                $needsUpdate = false;
+//             if ($product->stock > 0 && $preOrders->count() > 0) {
+//                 $currentStock = $product->stock;
+//                 $needsUpdate = false;
 
-                foreach ($preOrders as $item) {
-                    if ($currentStock >= $item->quantity) {
-                        $currentStock -= $item->quantity;
+//                 foreach ($preOrders as $item) {
+//                     if ($currentStock >= $item->quantity) {
+//                         $currentStock -= $item->quantity;
 
-                        $item->update([
-                            'is_preorder' => false,
-                            'preorder_status' => 'ready',
-                        ]);
+//                         $item->update([
+//                             'is_preorder' => false,
+//                             'preorder_status' => 'ready',
+//                         ]);
 
-                        $needsUpdate = true;
-                    } elseif ($currentStock > 0) {
-                        $item->update([
-                            'quantity' => $item->quantity - $currentStock,
-                        ]);
-                        $currentStock = 0;
-                        $needsUpdate = true;
-                        break;
-                    } else {
-                        break; // stok habis
-                    }
-                }
+//                         $needsUpdate = true;
+//                     } elseif ($currentStock > 0) {
+//                         $item->update([
+//                             'quantity' => $item->quantity - $currentStock,
+//                         ]);
+//                         $currentStock = 0;
+//                         $needsUpdate = true;
+//                         break;
+//                     } else {
+//                         break; // stok habis
+//                     }
+//                 }
 
-                if ($needsUpdate && $product->stock !== $currentStock) {
-                    $product->stock = $currentStock;
-                    $product->saveQuietly();
-                }
-            }
-        }
-    });
-}
+//                 if ($needsUpdate && $product->stock !== $currentStock) {
+//                     $product->stock = $currentStock;
+//                     $product->saveQuietly();
+//                 }
+//             }
+//         }
+//     });
+// }
 
 
 

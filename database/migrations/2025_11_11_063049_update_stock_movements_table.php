@@ -1,4 +1,4 @@
-<?php
+       <?php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -11,14 +11,24 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('stock_movements', function (Blueprint $table) {
-            if (!Schema::hasColumn('stock_movements', 'movement_type')) {
-                $table->enum('movement_type', ['in', 'out', 'preorder'])->after('product_id');
-            }
+        // UBAH DARI Schema::table JADI Schema::create
+        Schema::create('stock_movements', function (Blueprint $table) {
+            $table->id(); // Wajib ada ID
 
-            if (!Schema::hasColumn('stock_movements', 'note')) {
-                $table->text('note')->nullable()->after('quantity');
-            }
+            // Kita tambahkan kolom standar yang biasanya dibutuhkan
+            $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
+                // KOLOM BARU: Product Size (Kita pakai unsignedBigInteger biar aman)
+            $table->unsignedBigInteger('product_size_id')->nullable();
+            $table->integer('quantity')->default(0);
+
+            // Ini kolom 'movement_type' dan 'note' dari kodingan kamu yang lama
+            $table->enum('movement_type', ['in', 'out', 'preorder']);
+            $table->text('note')->nullable();
+            $table->text('description')->nullable();
+                // KOLOM BARU: Balance (Saldo stok)
+            $table->integer('balance_before')->default(0);
+            $table->integer('balance_after')->default(0);
+            $table->timestamps(); // Wajib ada created_at & updated_at
         });
     }
 
@@ -27,14 +37,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('stock_movements', function (Blueprint $table) {
-            if (Schema::hasColumn('stock_movements', 'movement_type')) {
-                $table->dropColumn('movement_type');
-            }
-
-            if (Schema::hasColumn('stock_movements', 'note')) {
-                $table->dropColumn('note');
-            }
-        });
+        // Kalau di-rollback, tabelnya dihapus
+        Schema::dropIfExists('stock_movements');
     }
 };

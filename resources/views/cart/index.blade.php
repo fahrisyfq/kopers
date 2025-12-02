@@ -211,7 +211,7 @@
                                 <div class="flex items-start gap-2.5 bg-blue-50 text-blue-700 p-3 rounded-lg text-xs mb-5 border border-blue-200">
                                     <i class="fas fa-info-circle text-blue-500 mt-0.5 flex-shrink-0 fa-fw"></i>
                                     <div>
-                                        Silakan **centang** item yang ingin Anda beli. Total akan dihitung otomatis.
+                                        Silakan centang item yang ingin Anda beli. Total akan dihitung otomatis.
                                     </div>
                                 </div>
 

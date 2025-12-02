@@ -30,6 +30,7 @@ class User extends Authenticatable
     'jurusan',
     'no_telp_siswa',
     'no_telp_ortu',
+    'is_blocked',
 ];
 
     

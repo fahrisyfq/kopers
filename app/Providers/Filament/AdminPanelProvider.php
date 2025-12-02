@@ -34,9 +34,11 @@ class AdminPanelProvider extends PanelProvider
             ->brandName('Koperasi SMKN 8 Jakarta')
             // ->brandLogo(asset('images/logo.jpg'))
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::Indigo, // Coba ganti jadi: Emerald, Rose, Blue, Violet, dll
+                'gray' => Color::Slate,     // Coba ganti jadi: Gray, Zinc, Neutral, Stone
             ])
-            
+            ->font('Poppins') // Ganti font ke Google Font lain (misal: 'Inter', 'Quicksand')
+                        
             // [PERBAIKAN] Ganti '->assets()' dengan '->viteTheme()'
             // Ini adalah cara yang benar untuk memuat CSS kustom
             ->viteTheme('resources/css/filament-admin.css')

@@ -8,52 +8,69 @@ use Filament\Widgets\ChartWidget;
 
 class ProductStockComparisonChart extends ChartWidget
 {
-    protected static ?string $heading = 'Perbandingan Stok Awal & Terjual per Produk';
+    protected static ?string $heading = 'Analisa Stok: Supply, Penjualan & PO';
+    
+    protected static ?string $maxHeight = '400px';
 
-    protected static ?int $sort = 4; // urutan tampil di dashboard
+    protected static ?int $sort = 4;
 
     protected function getData(): array
     {
         // Ambil semua produk
-        $products = Product::with('sizes')->get();
+        $products = Product::all();
 
         $labels = [];
-        $initialStocks = [];
-        $soldStocks = [];
+        $stockIn = [];
+        $stockOut = [];
+        $stockPO = [];
 
         foreach ($products as $product) {
             $labels[] = $product->title;
 
-            // Ambil stok awal (stok pertama kali dicatat dari pergerakan "in" pertama kali)
-            $firstMovement = StockMovement::where('product_id', $product->id)
+            // 1. Total Stok Fisik Masuk (Supply)
+            // Menghitung semua barang yang pernah masuk ke gudang (Restock)
+            $totalIn = StockMovement::where('product_id', $product->id)
                 ->where('movement_type', 'in')
-                ->orderBy('created_at', 'asc')
-                ->first();
-
-            $initialStock = $firstMovement
-                ? ($firstMovement->balance_before ?? 0) + $firstMovement->quantity
-                : 0;
-
-            // Hitung total stok keluar (penjualan)
-            $sold = StockMovement::where('product_id', $product->id)
+                ->where('is_preorder', false) // Abaikan antrian PO, hanya fisik
+                ->sum('quantity');
+            
+            // 2. Total Stok Terjual (Sales)
+            // Menghitung semua barang fisik yang keluar
+            $totalOut = StockMovement::where('product_id', $product->id)
                 ->where('movement_type', 'out')
                 ->sum('quantity');
 
-            $initialStocks[] = $initialStock;
-            $soldStocks[] = $sold;
+            // 3. Antrian Pre-Order Aktif
+            // Mengambil data real-time dari tabel produk
+            $currentPO = $product->preorder_quantity;
+
+            $stockIn[] = $totalIn;
+            $stockOut[] = $totalOut;
+            $stockPO[] = $currentPO;
         }
 
         return [
             'datasets' => [
                 [
-                    'label' => 'Stok Awal',
-                    'data' => $initialStocks,
-                    'backgroundColor' => '#4ade80', // hijau muda
+                    'label' => 'Total Supply (Masuk)',
+                    'data' => $stockIn,
+                    'backgroundColor' => '#34d399', // Hijau (Emerald 400)
+                    'borderColor' => '#10b981',
+                    'borderWidth' => 1,
                 ],
                 [
-                    'label' => 'Stok Terjual',
-                    'data' => $soldStocks,
-                    'backgroundColor' => '#f87171', // merah muda
+                    'label' => 'Terjual (Keluar)',
+                    'data' => $stockOut,
+                    'backgroundColor' => '#f87171', // Merah (Red 400)
+                    'borderColor' => '#ef4444',
+                    'borderWidth' => 1,
+                ],
+                [
+                    'label' => 'Antrian PO (Waiting)',
+                    'data' => $stockPO,
+                    'backgroundColor' => '#facc15', // Kuning (Yellow 400)
+                    'borderColor' => '#eab308',
+                    'borderWidth' => 1,
                 ],
             ],
             'labels' => $labels,

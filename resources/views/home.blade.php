@@ -187,6 +187,7 @@
 @include('partials.about')
 @include('partials.features')
 @include('partials.menuproduk')
+@include('partials.testimonials')
 
 {{-- [WAJIB] Tambahkan script AOS di akhir <body> (jika belum ada di app.blade.php) --}}
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>

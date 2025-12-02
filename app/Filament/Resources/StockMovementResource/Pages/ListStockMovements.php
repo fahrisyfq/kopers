@@ -7,6 +7,8 @@ use App\Models\StockMovement;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Builder; // ✅ pakai Builder Eloquent
+use App\Filament\Resources\StockMovementResource\Widgets\StockOverview;
+
 
 class ListStockMovements extends ListRecords
 {
@@ -29,5 +31,12 @@ class ListStockMovements extends ListRecords
         }
 
         return $query;
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            StockOverview::class,
+        ];
     }
 }

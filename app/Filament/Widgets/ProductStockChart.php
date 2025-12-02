@@ -7,30 +7,62 @@ use Filament\Widgets\ChartWidget;
 
 class ProductStockChart extends ChartWidget
 {
-    protected static ?string $heading = 'Grafik Produk Terjual vs Stok Tersisa';
+    protected static ?string $heading = 'Grafik Penjualan vs Sisa Stok vs PO';
+    
+    protected static ?string $maxHeight = '400px';
+
+    protected static ?int $sort = 5;
 
     protected function getData(): array
     {
-        // Hitung produk terjual dari relasi order_items (ubah sesuai model kamu)
-        $products = Product::withCount(['orderItems as sold' => function ($query) {
-            $query->select(\DB::raw('COALESCE(SUM(quantity), 0)'));
-        }])->get();
+        // Ambil produk beserta total quantity terjual
+        // Kita filter agar order yang 'cancelled' tidak ikut terhitung
+        $products = Product::withSum(['orderItems as sold_qty' => function ($query) {
+            $query->whereHas('order', function ($q) {
+                $q->where('payment_status', '!=', 'cancelled');
+            });
+        }], 'quantity')->get();
 
-        $labels = $products->pluck('title')->toArray();
-        $sold = $products->pluck('sold')->toArray();
-        $stock = $products->pluck('stock')->toArray();
+        $labels = [];
+        $soldData = [];
+        $stockData = [];
+        $poData = [];
+
+        foreach ($products as $product) {
+            $labels[] = $product->title;
+            
+            // Data Terjual
+            $soldData[] = (int) $product->sold_qty; 
+            
+            // Data Sisa Stok Fisik (Mengambil dari kolom stock parent yang sudah disinkronkan Observer)
+            $stockData[] = (int) $product->stock;
+
+            // Data Antrian PO (Hutang)
+            $poData[] = (int) $product->preorder_quantity;
+        }
 
         return [
             'datasets' => [
                 [
-                    'label' => 'Terjual',
-                    'data' => $sold,
-                    'backgroundColor' => 'rgba(16, 185, 129, 0.7)', // hijau
+                    'label' => 'Total Terjual',
+                    'data' => $soldData,
+                    'backgroundColor' => '#3b82f6', // Biru (Blue 500)
+                    'borderColor' => '#2563eb',
+                    'borderWidth' => 1,
                 ],
                 [
-                    'label' => 'Stok Tersisa',
-                    'data' => $stock,
-                    'backgroundColor' => 'rgba(59, 130, 246, 0.7)', // biru
+                    'label' => 'Sisa Stok Fisik',
+                    'data' => $stockData,
+                    'backgroundColor' => '#22c55e', // Hijau (Green 500)
+                    'borderColor' => '#16a34a',
+                    'borderWidth' => 1,
+                ],
+                [
+                    'label' => 'Antrian PO',
+                    'data' => $poData,
+                    'backgroundColor' => '#eab308', // Kuning (Yellow 500)
+                    'borderColor' => '#ca8a04',
+                    'borderWidth' => 1,
                 ],
             ],
             'labels' => $labels,

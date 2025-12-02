@@ -19,6 +19,7 @@ class Order extends Model
         'status',
         'payment_status',
         'proof_of_payment', // 🟢 DITAMBAHKAN INI
+        'is_printed', // 🟢 DITAMBAHKAN INI
     ];
 
     public function user()

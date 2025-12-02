@@ -3,6 +3,14 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+// 🔥 PASTIKAN BAGIAN USE INI ADA SEMUA 🔥
+use App\Models\Product; 
+use App\Models\ProductSize;
+use App\Observers\ProductStockObserver;
+use App\Observers\ProductSizeStockObserver;
+use App\Models\OrderItem;
+use App\Observers\OrderItemObserver;
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -11,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        
     }
 
     /**
@@ -19,6 +27,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Di dalam method boot()
+        Product::observe(ProductStockObserver::class);
+        ProductSize::observe(ProductSizeStockObserver::class);
+        OrderItem::observe(OrderItemObserver::class);
     }
 }

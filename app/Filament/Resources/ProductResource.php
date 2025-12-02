@@ -183,13 +183,56 @@ class ProductResource extends Resource
                     ),
 
                 // Kolom jumlah preorder
-                TextColumn::make('preorder_quantity')
+                // 🔥 KOLOM PRE-ORDER DENGAN RINCIAN SIZE 🔥
+                Tables\Columns\TextColumn::make('preorder_quantity')
                     ->label('Total Pre Order')
-                    ->sortable()
-                    ->getStateUsing(fn ($record) => $record->preorder_quantity . ' pcs')
-                    ->badge()
-                    ->color(fn ($record) => $record->preorder_quantity > 0 ? 'warning' : 'gray'),
+                    ->html() 
+                    ->alignCenter()
+                    ->getStateUsing(function (Product $record) {
+                        // Ambil nilai dari database dulu (ini yang sudah diperbaiki route fix-data)
+                        $total = $record->preorder_quantity;
+                        
+                        // Jika 0, tampilkan strip
+                        if ($total <= 0) {
+                            return '<span class="text-gray-400">-</span>';
+                        }
 
+                        $html = '<div class="flex flex-col items-center gap-1">';
+                        
+                        // Tampilkan Total Besar
+                        $html .= '<span class="inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">' . $total . ' pcs</span>';
+
+                        // Jika Kategori Seragam, Tampilkan Rincian Size
+                        if ($record->category === 'Seragam Sekolah') {
+                            
+                            // 👇 PERBAIKAN DISINI 👇
+                            $breakdown = \App\Models\OrderItem::query()
+                                ->where('product_id', $record->id)
+                                ->where('is_preorder', true)
+                                ->where('preorder_status', 'waiting') // ✅ WAJIB DITAMBAHKAN AGAR HANYA MENGHITUNG YANG BELUM LUNAS
+                                ->whereHas('order', function ($q) {
+                                    $q->where('status', '!=', 'cancelled');
+                                })
+                                ->selectRaw('product_size_id, SUM(quantity) as qty')
+                                ->groupBy('product_size_id')
+                                ->get();
+
+                            if ($breakdown->isNotEmpty()) {
+                                $html .= '<div class="mt-1 text-[10px] text-left bg-gray-50 border border-gray-200 rounded p-1.5 w-full min-w-[80px]">';
+                                foreach ($breakdown as $item) {
+                                    $sizeName = \App\Models\ProductSize::find($item->product_size_id)?->size ?? 'N/A';
+                                    $html .= "<div class='flex justify-between w-full gap-2'>
+                                                <span class='text-gray-500'>{$sizeName}:</span>
+                                                <span class='font-bold text-gray-700'>{$item->qty}</span>
+                                              </div>";
+                                }
+                                $html .= '</div>';
+                            }
+                        }
+
+                        $html .= '</div>';
+                        return $html;
+                    }),
 
                 BadgeColumn::make('is_preorder')
                     ->label('Status Stok')
@@ -233,14 +276,20 @@ class ProductResource extends Resource
         }),
 
         Action::make('manage_stock')
-            ->label('Manajemen Stok')
-            ->icon('heroicon-o-adjustments-horizontal')
-            ->color('info')
-            ->url(fn (Product $record): string => route('filament.admin.resources.stock-movements.index', [
-                'product_id' => $record->id,
-            ]))
-            ->tooltip('Lihat & kelola pergerakan stok produk ini')
-            ->openUrlInNewTab(),
+                    ->label('Manajemen Stok')
+                    ->icon('heroicon-o-adjustments-horizontal')
+                    ->color('info')
+                    // Kita kirim filter dalam format array 'tableFilters'
+                    // Ini akan otomatis mengisi filter di halaman tujuan
+                    ->url(fn (Product $record): string => route('filament.admin.resources.stock-movements.index', [
+                        'tableFilters' => [
+                            'product_id' => [
+                                'value' => $record->id,
+                            ],
+                        ],
+                    ]))
+                    ->tooltip('Lihat & kelola pergerakan stok produk ini')
+                    ->openUrlInNewTab(),
                     
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),

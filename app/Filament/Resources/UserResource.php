@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 use Filament\Tables\Actions\Action;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Filament\Notifications\Notification;
 
 class UserResource extends Resource
 {
@@ -77,6 +78,12 @@ class UserResource extends Resource
                 ->tel()
                 ->maxLength(20)
                 ->helperText('Gunakan format +62xxxxxx'),
+
+            Forms\Components\Toggle::make('is_blocked')
+                ->label('Blokir Siswa Ini?')
+                ->onColor('danger')
+                ->offColor('success')
+                ->helperText('Jika aktif, siswa tidak bisa melakukan pemesanan.'),
         ]);
     }
 
@@ -111,6 +118,15 @@ class UserResource extends Resource
                     ->counts('orders')
                     ->label('Jumlah Pesanan')
                     ->sortable(),
+                
+                Tables\Columns\IconColumn::make('is_blocked')
+                    ->label('Status Blokir')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-lock-closed')
+                    ->falseIcon('heroicon-o-check-circle')
+                    ->trueColor('danger')
+                    ->falseColor('success')
+                    ->tooltip(fn (User $record) => $record->is_blocked ? 'Siswa Diblokir' : 'Akun Aman'),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('kelas')
@@ -136,7 +152,14 @@ class UserResource extends Resource
                         'RPL' => 'RPL',
                         'Belum Ditentukan' => 'Belum Ditentukan',
                     ]),
-            ])
+
+                // 🔥 FILTER SISWA BERMASALAH 🔥
+                Tables\Filters\Filter::make('blocked')
+                    ->label('Hanya Siswa Diblokir')
+                    ->query(fn ($query) => $query->where('is_blocked', true)),
+                    
+                Tables\Filters\SelectFilter::make('kelas')->options(['10'=>'10','11'=>'11','12'=>'12']),
+            ])  
             ->headerActions([
                 // 💡 TOMBOL BARU DITAMBAHKAN DI SINI
                 Action::make('lihatProdukPesanan')
@@ -311,6 +334,67 @@ class UserResource extends Resource
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
+                Action::make('toggle_block')
+                    ->label(fn (User $record) => $record->is_blocked ? 'Buka Blokir' : 'Blokir Siswa')
+                    ->icon(fn (User $record) => $record->is_blocked ? 'heroicon-o-lock-open' : 'heroicon-o-no-symbol')
+                    ->color(fn (User $record) => $record->is_blocked ? 'success' : 'danger')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn (User $record) => $record->is_blocked ? 'Buka Blokir Siswa?' : 'Blokir Siswa Ini?')
+                    ->modalDescription(fn (User $record) => $record->is_blocked 
+                        ? 'Siswa akan dapat melakukan pemesanan kembali.' 
+                        : 'Siswa tidak akan bisa checkout atau menambah barang ke keranjang.')
+                    ->action(function (User $record) {
+                        $record->is_blocked = !$record->is_blocked;
+                        $record->save();
+
+                        Notification::make()
+                            ->title($record->is_blocked ? 'Siswa Diblokir' : 'Blokir Dibuka')
+                            ->body('Status akun siswa berhasil diperbarui.')
+                            ->status($record->is_blocked ? 'warning' : 'success')
+                            ->send();
+                    }),
+                Action::make('cetak_tagihan')
+                    ->label('Cetak Tagihan')
+                    ->icon('heroicon-o-printer')
+                    ->color('warning') // Warna kuning biar beda
+                    ->action(function (User $record) {
+                        // 1. Ambil order yang BELUM dicetak
+                        $orders = $record->orders()
+                                    ->where('is_printed', false)
+                                    ->with(['items.product', 'items.productSize'])
+                                    ->get();
+
+                        // 2. Validasi jika kosong
+                        if ($orders->isEmpty()) {
+                            Notification::make()
+                                ->title('Tidak ada tagihan baru')
+                                ->body('Semua pesanan siswa ini sudah dicetak sebelumnya.')
+                                ->warning()
+                                ->send();
+                            return;
+                        }
+
+                        // 3. Tandai sebagai sudah dicetak (Update Database)
+                        // Kita update dulu sebelum download agar tidak tercetak 2x
+                        // Gunakan pluck id agar query efisien
+                        \App\Models\Order::whereIn('id', $orders->pluck('id'))
+                            ->update(['is_printed' => true]);
+
+                        // 4. Generate PDF
+                        $pdf = Pdf::loadView('pdf.tagihan_siswa', [
+                            'user' => $record,
+                            'orders' => $orders
+                        ])->setPaper('a4', 'portrait');
+
+                        // 5. Download
+                        return response()->streamDownload(function () use ($pdf) {
+                            echo $pdf->stream();
+                        }, 'Tagihan-' . $record->nisn . '-' . now()->timestamp . '.pdf');
+                    })
+                    ->requiresConfirmation()
+                    ->modalHeading('Cetak Tagihan Baru?')
+                    ->modalDescription('Sistem hanya akan mencetak pesanan yang BELUM pernah dicetak sebelumnya. Setelah dicetak, pesanan akan ditandai sebagai "Sudah Dicetak".')
+                    ->modalSubmitActionLabel('Ya, Cetak & Tandai'),
             ])
             ->paginated([10, 25, 50, 100]);
     }
